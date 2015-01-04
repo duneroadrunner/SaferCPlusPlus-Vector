@@ -1,0 +1,128 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil Consolas;}{\f2\fnil\fcharset0 Consolas;}}
+{\colortbl ;\red0\green0\blue255;\red255\green255\blue255;\red0\green0\blue0;\red163\green21\blue21;\red43\green145\blue175;\red0\green128\blue0;\red111\green0\blue138;}
+{\*\generator Riched20 6.3.9600}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 Jan 2, 2015\par
+\par
+msetl is a c++(11) library that provides, among other things, a safer implementation of stl's vector. To use it, include  "msetl.h" and use "mse::mstd::vector" in place of "std::vector" to declare your vector. \par
+mse::mstd::vector should be quite safe, in the sense that any attempt to access invalid memory should throw an (std::out_of_range) exception. Also, doing things like attempting to compare two iterators pointing to different vector instances will throw an exception.\par
+That's pretty much all you need to know to use it. The rest of this document is just details and other features of msetl.\par
+\par
+\par
+A couple of cases where safety cannot be guaranteed is when using the constructor or insert() member function that takes "non-safe" (standard stl) iterators or pointers as parameters. For example:\par
+\cf1\highlight2\f1\fs19\par
+#include\cf3  \cf4 "msetl.h"\cf3\par
+\cf1 #include\cf3  \cf4 <iostream>\cf3\par
+\cf0\highlight0\f0\fs22 ...\par
+\cf3\highlight2\f1\fs19\tab\{\par
+\tab\tab\cf1 double\cf3  a1[3] = \{ 1.0, 2.0, 3.0 \};\par
+\tab\tab\cf1 double\cf3  *d_pointer1 = &(a1[0]);\par
+\tab\tab\cf1 double\cf3  a2[3] = \{ 4.0, 5.0, 360 \};\par
+\tab\tab\cf1 double\cf3  *d_pointer2 = &(a2[0]);\par
+\tab\tab mse::mstd::\cf5 vector\cf3 <\cf1 double\cf3 > v1;\par
+\tab\tab\cf6 //v1.insert(v1.begin(), d_pointer1, d_pointer2); /* not good */\cf3\par
+\tab\tab\cf6 /* std::vector supports "naked" pointers as parameters to the \f2\lang1033\tab\tab\tab\f1\lang9 insert() member\cf3\par
+\cf6\tab\tab function so mse::mstd::vector does also. Unfortunately there is no \f2\lang1033\tab\tab\tab\f1\lang9 way to ensure\cf3\par
+\cf6\tab\tab that the naked pointer parameters have valid values. */\cf3\par
+\par
+\tab\tab mse::mstd::\cf5 vector\cf3 <\cf1 double\cf3 > v2 = \{ 1.0, 2.0, 3.0 \};\par
+\tab\tab mse::mstd::\cf5 vector\cf3 <\cf1 double\cf3 > v3 = \{ 4.0, 5.0, 360 \};\par
+\tab\tab mse::mstd::\cf5 vector\cf3 <\cf1 double\cf3 > v4;\par
+\tab\tab\cf1 try\cf3  \{\par
+\tab\tab\tab v4.insert(v4.begin(), v2.begin(), v3.begin());\par
+\tab\tab\}\par
+\tab\tab\cf1 catch\cf3  (...) \{\par
+\tab\tab\tab std::cerr << \cf4 "expected exception"\cf3 ;\par
+\tab\tab\tab\cf6 /* The exception is triggered by a comparision of \f2\lang1033\tab\tab\tab\tab\tab\f1\lang9 incompatible "safe" iterators. */\cf3\par
+\tab\tab\}\par
+\tab\}\par
+\cf0\highlight0\f0\fs22\par
+mse::mstd::vector iterators are also safe against reference of deallocated vectors. That is, kind of like java,  deallocation of mse::mstd::vectors are intrinsically "managed" (delayed if necessary) so that you can't accidentally end up in a situation where an iterator is pointing to an mse::mstd::vector that has already been deallocated/deleted/freed:\par
+\par
+\cf3\highlight2\f1\fs19\tab\{\par
+\tab\tab\cf1 typedef\cf3  mse::mstd::\cf5 vector\cf3 <\cf1 int\cf3 > \cf5 vint_type\cf3 ;\par
+\tab\tab mse::mstd::\cf5 vector\cf3 <\cf5 vint_type\cf3 > vvi;\par
+\tab\tab\{\par
+\tab\tab\tab\cf5 vint_type\cf3  vi;\par
+\tab\tab\tab vi.push_back(5);\par
+\tab\tab\tab vvi.push_back(vi);\par
+\tab\tab\}\par
+\tab\tab\cf1 auto\cf3  vi_it = vvi[0].begin();\par
+\tab\tab vvi.clear();\par
+\tab\tab\cf6 /* At this point, the vint_type object is cleared from vvi, but it \f2\lang1033\tab\tab\tab\f1\lang9 has not been deallocated/destructed yet because it\cf3\par
+\cf6\tab\tab "knows" that there is an iterator, namely vi_it, that is still \f2\lang1033\tab\tab\tab\f1\lang9 referencing it. At the moment, std::shared_ptrs are being\cf3\par
+\cf6\tab\tab used to achieve this. */\cf3\par
+\tab\tab\cf1 auto\cf3  value = (*vi_it); \cf6 /* So this is actually ok. v\f2\lang1033 i\f1\lang9 _it still points \f2\lang1033\tab\tab\f1\lang9 to a valid item. */\cf3\par
+\tab\tab\cf7 assert\cf3 (5 == value);\par
+\tab\tab\cf5 vint_type\cf3  vi2;\par
+\tab\tab vi_it = vi2.begin();\par
+\tab\tab\cf6 /* The vint_type object that vi_it was originally pointing to is now \f2\lang1033\tab\tab\f1\lang9 deallocated/destructed, because vi_it no longer\cf3\par
+\cf6\tab\tab references it. */\cf3\par
+\tab\}\par
+\cf0\highlight0\f0\fs22\par
+Arguably, it would be better to have the iterator throw an exception when trying to reference a container that has already been "deallocated/freed", rather than keep the container in memory and treat references to the container as valid. With this in mind, do not assume that such references will continue to be treated as valid in future versions of the library.\par
+\par
+mse::mstd::vector does have some overhead, so it's more appropriate for use in situations where safety and compatibility are prioritized over performance and memory efficiency.\par
+Note that at the moment, mse::mstd::vector supports a mix of the c++98 and c++11 standards. It does not quite support the entire c++11 standard yet. In practice, it shouldn't be a problem for the vast majority of cases.\par
+\par
+Multi-modify vectors:\par
+Stl iterators were basically designed as thinly veiled pointers. As a result, vector iterators behave differently from, say, list iterators with respect to insertions and removals on the container. For example, let's say you have an iterator pointing to the fifth element of a container and you then remove the third element. If the container is a list, then the iterator remains valid and now points to the fourth element. However, if the container is a vector, the iterator becomes "invalid".\par
+In the case of insertion it's even worse. Upon any insertion, any vector iterator may become invalid "if a reallocation occurs". \par
+This makes vector iterators less useful (or more tedious), and (in our opinion) more error prone than list iterators. So the mestl library also provides a version of the vector class that supports an iterator that behaves like a list iterator. That is, an iterator that remains valid (and pointing to the same item) after a container modification, as long as the item it points to has not been removed. This also means that any reallocations are transparent to the user. This new version of the vector is "mse::msevector", and it's "list-style" iterator is "mse::msevector::ipointer" ("mse::msevector::cipointer" for the "const" version).\par
+mse::msevector also supports two other iterator types: "mse::msevector::iterator" for (high performance) compatibility with stl code, and "mse::msevector::ss_iterator_type" which is essentially just a "safe" version of mse::msevector::iterator.\par
+\par
+\cf3\highlight2\f1\fs19\tab\{\par
+\tab\tab mse::\cf5 msevector\cf3 <\cf1 int\cf3 > v = \{ 1, 2, 3, 4 \};\par
+\tab\tab mse::\cf5 msevector\cf3 <\cf1 int\cf3 >::\cf5 ipointer\cf3  ip_vit1(v);\par
+\tab\tab\cf6 /*ip_vit1.set_to_beginning();*/\cf3  \cf6 /* This would be redundant as \f2\lang1033\tab\tab\tab\f1\lang9 ipointers are set to the beginning at initialization. */\cf3\par
+\tab\tab ip_vit1.advance(2);\par
+\tab\tab\cf7 assert\cf3 (3 == ip_vit1.item());\par
+\tab\tab\cf1 auto\cf3  ip_vit2 = v.ibegin(); \cf6 /* ibegin() returns an ipointer */\cf3\par
+\tab\tab v.erase(ip_vit2); \cf6 /* remove the first item */\cf3\par
+\tab\tab\cf7 assert\cf3 (3 == ip_vit1.item());\par
+\tab\tab ip_vit1.set_to_previous();\par
+\tab\tab\cf7 assert\cf3 (2 == ip_vit1.item());\par
+\tab\}\par
+\cf0\highlight0\f0\fs22\par
+mse::msevectors are slightly less safe than mse::mstd::vectors in that mse::msevector iterators are not safe with respect to reference of deallocated vectors (i.e. java-style delay of object destruction). In exchange however, mse::msevectors have less overhead and should be a little bit faster. If you're looking to improve safety with very little compromise with respect to compatibility and not too much compromise with respect to performance, mse::msevectors may be the way to go.\par
+\par
+The mestl library provides a third version of the vector class, mse::ivector, which is very safe, like mse::mstd::vector, but only supports the mse::ivector::ipointer "list-style" iterators. mse::ivector is more appropriate for situations where safety is a priority and you feel (as we do) that stl vector iterators are intrinsicly problematic. mse::ivector::ipointers can still be used with stl algorithms (like std::sort).\par
+\par
+Safer c++:\par
+The msetl was created to support a new style/convention of c++ programming that attempts to approach a "java like" level of safety.\par
+Some potential dangers in c++:\par
+- native (aka "naked") pointers in general, including native arrays and function pointers\par
+- references to deallocated variables/objects\par
+- uninitialized variables/objects\par
+- std::unique_ptr doesn't check dereferences\par
+- std::shared_ptr used on something other than a newly allocated pointer\par
+- unsafe stl in general\par
+- non-virtual destructors\par
+- reinterpret casts (and unions)\par
+\par
+We are not going to fully define a "Safer c++" programming convention here, but considering the above list, some of the rules of a "Safer c++" programming convention might be:\par
+i) A prohibition on the use of native pointers in general, including native arrays and function pointers. Smart pointers like std::shared_ptr can be used instead.\par
+ii) A prohibition on the use of types that do not have a default initialization value. The msetl library provides substitutes for common primitive types.\par
+iii) A prohibition on the use of reinterpret casts (and unions).\par
+iv) A prohibition on the use of std::unique_ptr. A safer replacement is needed.\par
+v) A prohibition on declarations of std::shared_ptr that are not in the form of "std::shared_ptr<> x = std::make_shared<>(...);"\par
+\par
+The stl issue should be solved by future development of "safe" implementations of the stl. Visual Studio already supports "checked iterators". \par
+C++ references are potentially as dangerous as pointers when applied to dynamically allocated objects. The problem with prohibiting them outright is that they are just so convenient.\par
+\par
+Why not just use java?:\par
+Java is probably a good option in most cases. It might be considered to have a couple of potential drawbacks though:\par
+i) Reliance on garbage collection:\par
+\tab a) Maximum memory use is not deterministic (or deterministically bounded).\par
+\tab b) Potential gc "clean up pauses" are not compatible with some real time \par
+\tab\tab applications.\par
+\tab c) Non-deterministic destructors. This means that raii programming is not supported.\par
+\tab\tab The raii paradigm is arguably very useful in reducing many "higher level"\par
+\tab\tab programming errors.\par
+ii) Reliance on the jvm/jre:\par
+\tab a) The jvm/jre require resources (memory) at runtime.\par
+\tab b) There could be (and have been) security bugs in popular implementations of the\par
+\tab\tab  jvm/jre.\par
+\par
+\par
+}
+ 
