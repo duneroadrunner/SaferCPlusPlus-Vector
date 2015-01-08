@@ -12,6 +12,8 @@
 #include <limits>       // std::numeric_limits
 #include <stdexcept>      // std::out_of_range
 
+//define MSVC2010_COMPATIBILE
+
 namespace mse {
 	/* When the mse primitive replacements are "disabled" they lose their default initialization and may cause problems for
 	code that relies on it. */
@@ -343,7 +345,9 @@ namespace mse {
 
 		// Casts to primitive integer types
 		operator CInt() const { return CInt(m_val); }
+#ifndef MSVC2010_COMPATIBILE
 		explicit operator size_t() const { return (m_val); }
+#endif /*MSVC2010_COMPATIBILE*/
 		//size_t as_a_size_t() const { return m_val; }
 
 		CSize_t operator ~() const { return (~m_val); }
@@ -577,7 +581,9 @@ namespace mse {
 		szt4 += szt2;
 		szt4 -= 23;
 		szt4++;
+#ifndef MSVC2010_COMPATIBILE
 		size_t szt5 = (size_t)szt4;
+#endif /*MSVC2010_COMPATIBILE*/
 		bool b3 = (szt1 < szt2);
 		b3 = (szt1 < 17);
 		b3 = (19 < szt1);

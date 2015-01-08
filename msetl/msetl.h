@@ -78,6 +78,34 @@ namespace mse {
 		_Ty* m_ptr;
 	};
 
+#ifndef _NOEXCEPT
+#define _NOEXCEPT
+#endif /*_NOEXCEPT*/
+
+#ifndef _XSTD
+#define _XSTD ::std::
+#endif /*_XSTD*/
+
+	template<class _Ty, _Ty _Val>
+	struct integral_constant
+	{	// convenient template for integral constant types
+	static const _Ty value = _Val;
+
+	typedef _Ty value_type;
+	typedef integral_constant<_Ty, _Val> type;
+
+	operator value_type() const
+		{	// return stored value
+		return (value);
+		}
+	};
+
+	template<class _Iter>
+	struct _mse_Is_iterator
+	: public integral_constant<bool, !std::is_integral<_Iter>::value>
+	{	// tests for reasonable iterator candidate
+	};
+
 	/* Note that, at the moment, msevector inherits publicly from std::vector. This is not intended to be a permanent
 		characteristic of msevector and any reference to, or interpretation of, an msevector as an std::vector is (and has
 		always been) depricated. msevector endeavors to support the subset of the std::vector interface that is compatible
@@ -108,9 +136,17 @@ namespace mse {
 		/* Note that safety cannot be guaranteed when using these constructors that take unsafe iterator and/or pointer parameters. */
 		msevector(_It _F, _It _L, const _A& _Al = _A()) : base_class(_F, _L, _Al), m_mmitset(*this) { m_debug_size = size(); }
 		msevector(const _Ty*  _F, const _Ty*  _L, const _A& _Al = _A()) : base_class(_F, _L, _Al), m_mmitset(*this) { m_debug_size = size(); }
-		template<class _Iter, class = typename enable_if<_Is_iterator<_Iter>::value, void>::type>
+		template<class _Iter
+#ifndef MSVC2010_COMPATIBILE
+			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
+		>
 		msevector(_Iter _First, _Iter _Last) : base_class(_First, _Last), m_mmitset(*this) { m_debug_size = size(); }
-		template<class _Iter, class = typename enable_if<_Is_iterator<_Iter>::value, void>::type>
+		template<class _Iter
+#ifndef MSVC2010_COMPATIBILE
+			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
+		>
 		msevector(_Iter _First, _Iter _Last, const typename base_class::_Alloc& _Al) : base_class(_First, _Last, _Al), m_mmitset(*this) { m_debug_size = size(); }
 		_Myt& operator=(const base_class& _X) {
 			base_class::operator =(_X);
@@ -243,6 +279,12 @@ namespace mse {
 			m_debug_size = size();
 			m_mmitset.reset();
 		}
+		template<class _Iter>
+		void assign(_Iter _First, _Iter _Last) {	// assign [_First, _Last)
+			base_class::assign(_First, _Last);
+			m_debug_size = size();
+			m_mmitset.reset();
+		}
 		void assign(size_type _N, const _Ty& _X = _Ty()) {
 			base_class::assign(_N, _X);
 			m_debug_size = size();
@@ -271,28 +313,44 @@ namespace mse {
 			}
 			return retval;
 		}
-		iterator insert(iterator _P, size_type _M, const _Ty& _X) {
-			CInt di = std::distance(base_class::begin(), _P); CSize_t d = di;
+#ifndef MSVC2010_COMPATIBILE
+		iterator
+#else /*MSVC2010_COMPATIBILE*/
+		void
+#endif /*MSVC2010_COMPATIBILE*/
+			insert(const_iterator _P, size_type _M, const _Ty& _X) {
+			CInt di = std::distance(base_class::cbegin(), _P); CSize_t d = di;
 			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
 
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			iterator retval = base_class::insert(_P, _M, _X);
+#ifndef MSVC2010_COMPATIBILE
+			iterator retval = 
+#endif /*MSVC2010_COMPATIBILE*/
+				base_class::insert(_P, _M, _X);
 			m_debug_size = size();
 
 			assert((original_size + _M) == CSize_t((*this).size()));
+#ifndef MSVC2010_COMPATIBILE
 			assert(d == std::distance(base_class::begin(), retval));
+#endif /*MSVC2010_COMPATIBILE*/
 			m_mmitset.shift_inclusive_range(d, original_size, _M);
 			auto new_capacity = CSize_t((*this).capacity());
 			bool realloc_occured = (new_capacity != original_capacity);
 			if (realloc_occured) {
 				m_mmitset.sync_iterators_to_index();
 			}
+#ifndef MSVC2010_COMPATIBILE
 			return retval;
+#endif /*MSVC2010_COMPATIBILE*/
 		}
 		template<class _Iter>
-		typename std::enable_if<std::_Is_iterator<_Iter>::value, iterator>::type
+#ifndef MSVC2010_COMPATIBILE
+		typename std::enable_if<_mse_Is_iterator<_Iter>::value, iterator>::type
+#else /*MSVC2010_COMPATIBILE*/
+		typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
 			insert(const_iterator _Where, _Iter _First, _Iter _Last) {	// insert [_First, _Last) at _Where
 				CInt di = std::distance(base_class::cbegin(), _Where); CSize_t d = di;
 				if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
@@ -302,26 +360,45 @@ namespace mse {
 				auto original_capacity = CSize_t((*this).capacity());
 
 				//if (0 > _M) { throw(std::out_of_range("invalid argument - iterator insert() - msevector")); }
-				auto retval = base_class::insert(_Where, _First, _Last);
+#ifndef MSVC2010_COMPATIBILE
+				auto retval = 
+#endif /*MSVC2010_COMPATIBILE*/
+					base_class::insert(_Where, _First, _Last);
 				m_debug_size = size();
 
 				assert((original_size + _M) == CSize_t((*this).size()));
+#ifndef MSVC2010_COMPATIBILE
 				assert(d == std::distance(base_class::begin(), retval));
+#endif /*MSVC2010_COMPATIBILE*/
 				m_mmitset.shift_inclusive_range(d, original_size, _M);
 				auto new_capacity = CSize_t((*this).capacity());
 				bool realloc_occured = (new_capacity != original_capacity);
 				if (realloc_occured) {
 					m_mmitset.sync_iterators_to_index();
 				}
+#ifndef MSVC2010_COMPATIBILE
 				return retval;
+#endif /*MSVC2010_COMPATIBILE*/
 			}
-		template<class... _Valty>
-		void emplace_back(_Valty&&... _Val)
+		template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Valty>
+		void emplace_back(_Valty&&
+#ifndef MSVC2010_COMPATIBILE
+		...
+#endif /*MSVC2010_COMPATIBILE*/
+		_Val)
 		{	// insert by moving into element at end
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			base_class::emplace_back(std::forward<_Valty>(_Val)...);
+			base_class::emplace_back(std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+				...
+#endif /*MSVC2010_COMPATIBILE*/
+				);
 			m_debug_size = size();
 
 			assert((original_size + 1) == CSize_t((*this).size()));
@@ -332,8 +409,16 @@ namespace mse {
 				m_mmitset.sync_iterators_to_index();
 			}
 		}
-		template<class... _Valty>
-		iterator emplace(const_iterator _Where, _Valty&&... _Val)
+		template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Valty>
+		iterator emplace(const_iterator _Where, _Valty&&
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Val)
 		{	// insert by moving _Val at _Where
 			CInt di = std::distance(base_class::cbegin(), _Where); CSize_t d = di;
 			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator emplace() - msevector")); }
@@ -341,7 +426,11 @@ namespace mse {
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			auto retval = base_class::emplace(_Where, std::forward<_Valty>(_Val)...);
+			auto retval = base_class::emplace(_Where, std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+				...
+#endif /*MSVC2010_COMPATIBILE*/
+				);
 			m_debug_size = size();
 
 			assert((original_size + 1) == CSize_t((*this).size()));
@@ -422,6 +511,7 @@ namespace mse {
 			m_mmitset.reset();
 		}
 
+#ifndef MSVC2010_COMPATIBILE
 		msevector(_XSTD initializer_list<value_type> _Ilist,
 			const _Alloc& _Al = allocator_type())
 			: base_class(_Ilist, _Al), m_mmitset(*this) {	// construct from initializer_list
@@ -458,6 +548,7 @@ namespace mse {
 			}
 			return retval;
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 
 		size_type m_debug_size;
 
@@ -1241,11 +1332,13 @@ namespace mse {
 			_L++;
 			(*this).insert(_P, _F, _L);
 		}
+#ifndef MSVC2010_COMPATIBILE
 		void insert_before(mm_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			iterator _P = pos;
 			(*this).insert(_P, _Ilist);
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		ipointer insert_before(ipointer &pos, size_type _M, const _Ty& _X) {
 			CSize_t original_pos = pos.position();
 			insert_before(pos.item_pointer(), _M, _X);
@@ -1269,12 +1362,14 @@ namespace mse {
 			auto end = last; end.set_to_next();
 			return insert_before(pos, first, end);
 		}
+#ifndef MSVC2010_COMPATIBILE
 		ipointer insert_before(ipointer &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
 			CSize_t original_pos = pos.position();
 			(*this).insert(pos.item_pointer(), _Ilist);
 			ipointer retval(*this); retval.advance((CInt)original_pos);
 			return retval;
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		void insert_before(CSize_t pos, _Ty&& _X) {
 			iterator _P = (*this).begin() + pos.as_a_size_t();
 			(*this).insert(_P, std::move(_X));
@@ -1287,16 +1382,20 @@ namespace mse {
 			iterator _P = (*this).begin() + pos.as_a_size_t();
 			(*this).insert(_P, _M, _X);
 		}
+#ifndef MSVC2010_COMPATIBILE
 		void insert_before(CSize_t pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
 			iterator _P = (*this).begin() + pos.as_a_size_t();
 			(*this).insert(_P, _Ilist);
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		/* These insert() functions are just aliases for their corresponding insert_before() functions. */
 		ipointer insert(ipointer &pos, size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
 		ipointer insert(ipointer &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
 		ipointer insert(ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
 		ipointer insert(ipointer &pos, const cipointer &start, const cipointer &end) { return insert_before(pos, start, end); }
+#ifndef MSVC2010_COMPATIBILE
 		ipointer insert(ipointer &pos, _XSTD initializer_list<value_type> _Ilist) { return insert_before(pos, _Ilist); }
+#endif /*MSVC2010_COMPATIBILE*/
 		void erase(mm_iterator_type &pos) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
 			iterator _P = pos;
@@ -1875,6 +1974,7 @@ namespace mse {
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
+#ifndef MSVC2010_COMPATIBILE
 		ss_iterator_type insert_before(ss_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			CSize_t original_pos = pos.position();
@@ -1884,6 +1984,7 @@ namespace mse {
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		/* These insert() functions are just aliases for their corresponding insert_before() functions. */
 		ss_iterator_type insert(ss_iterator_type &pos, size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
 		ss_iterator_type insert(ss_iterator_type &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
@@ -1891,7 +1992,9 @@ namespace mse {
 		ss_iterator_type insert(ss_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) { return insert_before(pos, start, end); }
 		/* Note that safety cannot be guaranteed when using an insert() function that takes unsafe iterator and/or pointer parameters. */
 		ss_iterator_type insert(ss_iterator_type &pos, const _Ty* start, const _Ty* &end) { return insert_before(pos, start, end); }
+#ifndef MSVC2010_COMPATIBILE
 		ss_iterator_type insert(ss_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) { return insert_before(pos, _Ilist); }
+#endif /*MSVC2010_COMPATIBILE*/
 		ss_iterator_type erase(ss_iterator_type &pos) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
 			iterator _P = pos;
@@ -1946,6 +2049,12 @@ namespace mse {
 		ivector(const _Myt& _X) : m_shptr(new _MV(_X.msevector())) {}
 		typedef typename _MV::const_iterator _It;
 		ivector(_It _F, _It _L, const _A& _Al = _A()) : m_shptr(new _MV(_F, _L, _Al)) {}
+		template<class _Iter
+#ifndef MSVC2010_COMPATIBILE
+			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
+		>
+		ivector(_Iter _First, _Iter _Last) : m_shptr(new _MV(_First, _Last)) {}
 
 		_Myt& operator=(_MV&& _X) { m_shptr->operator=(std::move(_X)); return (*this); }
 		_Myt& operator=(const _MV& _X) { m_shptr->operator=(_X); return (*this); }
@@ -1964,22 +2073,48 @@ namespace mse {
 		typename _MV::iterator insert(typename _MV::iterator _P, const _Ty& _X = _Ty()) { return m_shptr->insert(_P, _X); }
 		typename _MV::iterator insert(typename _MV::iterator _P, typename _MV::size_type _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
 		template<class _Iter>
-		typename std::enable_if<std::_Is_iterator<_Iter>::value, typename _MV::iterator>::type
+		typename std::enable_if<_mse_Is_iterator<_Iter>::value, typename _MV::iterator>::type
 			insert(typename _MV::const_iterator _Where, _Iter _First, _Iter _Last) { return m_shptr->insert(_Where, _First, _Last); }
-		template<class... _Valty>
-		void emplace_back(_Valty&&... _Val) { m_shptr->emplace_back(std::forward<_Valty>(_Val)...); }
-		template<class... _Valty>
-		typename _MV::iterator emplace(typename _MV::const_iterator _Where, _Valty&&... _Val) { return m_shptr->emplace(_Where, std::forward<_Valty>(_Val)...); }
+		template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Valty>
+		void emplace_back(_Valty&&
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+		_Val) { m_shptr->emplace_back(std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+		); }
+		template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Valty>
+		typename _MV::iterator emplace(typename _MV::const_iterator _Where, _Valty&&
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+		_Val) { return m_shptr->emplace(_Where, std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+		); }
 		typename _MV::iterator erase(typename _MV::iterator _P) { return m_shptr->emplace(_P); }
 		typename _MV::iterator erase(typename _MV::iterator _F, typename _MV::iterator _L) { return m_shptr->emplace(_F, _L); }
 		void clear() { m_shptr->clear(); }
 		void swap(_MV& _X) { m_shptr->swap(_X); }
 		void swap(_Myt& _X) { m_shptr->swap(_X.msevector()); }
 
+#ifndef MSVC2010_COMPATIBILE
 		ivector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const typename _MV::_Alloc& _Al = _MV::allocator_type()) : m_shptr(new _MV(_Ilist, _Al)) {}
 		_Myt& operator=(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->operator=(_Ilist); return (*this); }
 		void assign(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->assign(_Ilist); }
 		typename _MV::iterator insert(typename _MV::const_iterator _Where, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return m_shptr->insert(_Where, _Ilist); }
+#endif /*MSVC2010_COMPATIBILE*/
 
 		typename _MV::size_type capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
 		void shrink_to_fit() { m_shtr->shrink_to_fit(); }
@@ -2187,11 +2322,13 @@ namespace mse {
 			auto end = last; end.set_to_next();
 			return insert_before_inclusive(pos, first, end);
 		}
+#ifndef MSVC2010_COMPATIBILE
 		ipointer insert_before(ipointer &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 			auto res = m_shptr->insert_before(pos.msevector_ipointer(), _Ilist);
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		void insert_before(CSize_t pos, _Ty&& _X) {
 			m_shptr->insert_before(_P, std::move(_X));
 		}
@@ -2201,9 +2338,11 @@ namespace mse {
 		void insert_before(CSize_t pos, typename _MV::size_type _M, const _Ty& _X) {
 			m_shptr->insert_before(_P, _M, _X);
 		}
+#ifndef MSVC2010_COMPATIBILE
 		void insert_before(CSize_t pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 			m_shptr->insert_before(_P, _Ilist);
 		}
+#endif /*MSVC2010_COMPATIBILE*/
 		ipointer erase(ipointer &pos) {
 			auto res = m_shptr->erase(pos.msevector_ipointer());
 			ipointer retval(*this); retval.msevector_ipointer() = res;
@@ -2270,9 +2409,17 @@ namespace mse {
 			typedef typename _MV::const_iterator _It;
 			vector(_It _F, _It _L, const _A& _Al = _A()) : m_shptr(new _MV(_F, _L, _Al)) {}
 			vector(const _Ty* _F, const _Ty* _L, const _A& _Al = _A()) : m_shptr(new _MV(_F, _L, _Al)) {}
-			template<class _Iter, class = typename enable_if<_Is_iterator<_Iter>::value, void>::type>
-			vector(_Iter _First, _Iter _Last) : base_class(_First, _Last) { m_debug_size = size(); }
-			template<class _Iter, class = typename enable_if<_Is_iterator<_Iter>::value, void>::type>
+			template<class _Iter
+#ifndef MSVC2010_COMPATIBILE
+				, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
+			>
+			vector(_Iter _First, _Iter _Last) : m_shptr(new _MV(_First, _Last)) {}
+			template<class _Iter
+#ifndef MSVC2010_COMPATIBILE
+				, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+#endif /*MSVC2010_COMPATIBILE*/
+			>
 			vector(_Iter _First, _Iter _Last, const typename _MV::_Alloc& _Al) : base_class(_First, _Last, _Al) { m_debug_size = size(); }
 
 			_Myt& operator=(_MV&& _X) { m_shptr->operator=(std::move(_X)); return (*this); }
@@ -2292,22 +2439,48 @@ namespace mse {
 			typename _MV::iterator insert(typename _MV::iterator _P, const _Ty& _X = _Ty()) { return m_shptr->insert(_P, _X); }
 			typename _MV::iterator insert(typename _MV::iterator _P, typename _MV::size_type _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
 			template<class _Iter>
-			typename std::enable_if<std::_Is_iterator<_Iter>::value, typename _MV::iterator>::type
+			typename std::enable_if<_mse_Is_iterator<_Iter>::value, typename _MV::iterator>::type
 				insert(typename _MV::const_iterator _Where, _Iter _First, _Iter _Last) { return m_shptr->insert(_Where, _First, _Last); }
-			template<class... _Valty>
-			void emplace_back(_Valty&&... _Val) { m_shptr->emplace_back(std::forward<_Valty>(_Val)...); }
-			template<class... _Valty>
-			typename _MV::iterator emplace(typename _MV::const_iterator _Where, _Valty&&... _Val) { return m_shptr->emplace(_Where, std::forward<_Valty>(_Val)...); }
+			template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+				_Valty>
+			void emplace_back(_Valty&&
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Val) { m_shptr->emplace_back(std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			); }
+			template<class
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+				_Valty>
+			typename _MV::iterator emplace(typename _MV::const_iterator _Where, _Valty&&
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			_Val) { return m_shptr->emplace(_Where, std::forward<_Valty>(_Val)
+#ifndef MSVC2010_COMPATIBILE
+			...
+#endif /*MSVC2010_COMPATIBILE*/
+			); }
 			typename _MV::iterator erase(typename _MV::iterator _P) { return m_shptr->emplace(_P); }
 			typename _MV::iterator erase(typename _MV::iterator _F, typename _MV::iterator _L) { return m_shptr->emplace(_F, _L); }
 			void clear() { m_shptr->clear(); }
 			void swap(_MV& _X) { m_shptr->swap(_X); }
 			void swap(_Myt& _X) { m_shptr->swap(_X.msevector()); }
 
+#ifndef MSVC2010_COMPATIBILE
 			vector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const typename _MV::_Alloc& _Al = _MV::allocator_type()) : m_shptr(new _MV(_Ilist, _Al)) {}
 			_Myt& operator=(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->operator=(_Ilist); return (*this); }
 			void assign(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->assign(_Ilist); }
 			typename _MV::iterator insert(typename _MV::const_iterator _Where, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return m_shptr->insert(_Where, _Ilist); }
+#endif /*MSVC2010_COMPATIBILE*/
 
 			typename _MV::size_type capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
 			void shrink_to_fit() { m_shtr->shrink_to_fit(); }
@@ -2526,27 +2699,33 @@ namespace mse {
 				auto end = last; end.set_to_next();
 				return insert_before_inclusive(pos, first, end);
 			}
+#ifndef MSVC2010_COMPATIBILE
 			iterator insert_before(iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), _Ilist);
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
+#endif /*MSVC2010_COMPATIBILE*/
 			void insert_before(CSize_t pos, const _Ty& _X = _Ty()) {
 				m_shptr->insert_before(_P, _X);
 			}
 			void insert_before(CSize_t pos, typename _MV::size_type _M, const _Ty& _X) {
 				m_shptr->insert_before(_P, _M, _X);
 			}
+#ifndef MSVC2010_COMPATIBILE
 			void insert_before(CSize_t pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 				m_shptr->insert_before(_P, _Ilist);
 			}
+#endif /*MSVC2010_COMPATIBILE*/
 			/* These insert() functions are just aliases for their corresponding insert_before() functions. */
 			iterator insert(iterator &pos, typename _MV::size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
 			iterator insert(iterator &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
 			iterator insert(iterator &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
 			iterator insert(iterator &pos, const const_iterator &start, const const_iterator &end) { return insert_before(pos, start, end); }
 			iterator insert(iterator &pos, const _Ty* start, const _Ty* end) { return insert_before(pos, start, end); }
+#ifndef MSVC2010_COMPATIBILE
 			iterator insert(iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return insert_before(pos, _Ilist); }
+#endif /*MSVC2010_COMPATIBILE*/
 			iterator erase(iterator &pos) {
 				auto res = m_shptr->erase(pos.msevector_ss_iterator_type());
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
