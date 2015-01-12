@@ -100,11 +100,18 @@ namespace mse {
 		}
 	};
 
+#ifndef MSVC2010_COMPATIBILE
 	template<class _Iter>
 	struct _mse_Is_iterator
 	: public integral_constant<bool, !std::is_integral<_Iter>::value>
 	{	// tests for reasonable iterator candidate
 	};
+	template<typename _InIter>
+	using _mse_RequireInputIter = typename
+	  std::enable_if<std::is_convertible<typename
+	  std::iterator_traits<_InIter>::iterator_category,
+	  std::input_iterator_tag>::value>::type;
+#endif /*MSVC2010_COMPATIBILE*/
 
 	/* Note that, at the moment, msevector inherits publicly from std::vector. This is not intended to be a permanent
 		characteristic of msevector and any reference to, or interpretation of, an msevector as an std::vector is (and has
@@ -117,14 +124,13 @@ namespace mse {
 	class msevector : public std::vector<_Ty, _A> {
 	public:
 		typedef std::vector<_Ty, _A> base_class;
-
 		typedef msevector<_Ty, _A> _Myt;
 
 		explicit msevector(const _A& _Al = _A())
 			: base_class(_Al), m_mmitset(*this) {
 			m_debug_size = size();
 		}
-		explicit msevector(size_type _N, const _Ty& _V = _Ty(), const _A& _Al = _A())
+		explicit msevector(size_t _N, const _Ty& _V = _Ty(), const _A& _Al = _A())
 			: base_class(_N, _V, _Al), m_mmitset(*this) {
 			m_debug_size = size();
 		}
@@ -132,22 +138,25 @@ namespace mse {
 		msevector(const base_class& _X) : base_class(_X), m_mmitset(*this) { m_debug_size = size(); }
 		msevector(_Myt&& _X) : base_class(std::move(_X)), m_mmitset(*this) { m_debug_size = size(); }
 		msevector(const _Myt& _X) : base_class(_X), m_mmitset(*this) { m_debug_size = size(); }
-		typedef const_iterator _It;
-		/* Note that safety cannot be guaranteed when using these constructors that take unsafe iterator and/or pointer parameters. */
+		typedef typename base_class::const_iterator _It;
+		/* Note that safety cannot be guaranteed when using these constructors that take unsafe typename base_class::iterator and/or pointer parameters. */
 		msevector(_It _F, _It _L, const _A& _Al = _A()) : base_class(_F, _L, _Al), m_mmitset(*this) { m_debug_size = size(); }
 		msevector(const _Ty*  _F, const _Ty*  _L, const _A& _Al = _A()) : base_class(_F, _L, _Al), m_mmitset(*this) { m_debug_size = size(); }
 		template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			//, class = typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			, class = _mse_RequireInputIter<_Iter>
 #endif /*MSVC2010_COMPATIBILE*/
 		>
 		msevector(_Iter _First, _Iter _Last) : base_class(_First, _Last), m_mmitset(*this) { m_debug_size = size(); }
 		template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			//, class = typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			, class = _mse_RequireInputIter<_Iter>
 #endif /*MSVC2010_COMPATIBILE*/
 		>
-		msevector(_Iter _First, _Iter _Last, const typename base_class::_Alloc& _Al) : base_class(_First, _Last, _Al), m_mmitset(*this) { m_debug_size = size(); }
+		//msevector(_Iter _First, _Iter _Last, const typename base_class::_Alloc& _Al) : base_class(_First, _Last, _Al), m_mmitset(*this) { m_debug_size = size(); }
+		msevector(_Iter _First, _Iter _Last, const _A& _Al) : base_class(_First, _Last, _Al), m_mmitset(*this) { m_debug_size = size(); }
 		_Myt& operator=(const base_class& _X) {
 			base_class::operator =(_X);
 			m_debug_size = size();
@@ -164,7 +173,7 @@ namespace mse {
 			m_mmitset.reset();
 			return (*this);
 		}
-		void reserve(size_type _Count)
+		void reserve(size_t _Count)
 		{	// determine new minimum length of allocated storage
 			auto original_capacity = CSize_t((*this).capacity());
 
@@ -187,7 +196,7 @@ namespace mse {
 				m_mmitset.sync_iterators_to_index();
 			}
 		}
-		void resize(size_type _N, const _Ty& _X = _Ty()) {
+		void resize(size_t _N, const _Ty& _X = _Ty()) {
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 			bool shrinking = (_N < original_size);
@@ -205,26 +214,26 @@ namespace mse {
 				m_mmitset.sync_iterators_to_index();
 			}
 		}
-		const_reference operator[](size_type _P) const {
+		typename base_class::const_reference operator[](size_t _P) const {
 			return at(_P);
 		}
-		reference operator[](size_type _P) {
+		typename base_class::reference operator[](size_t _P) {
 			return at(_P);
 		}
-		reference front() {	// return first element of mutable sequence
-			if (0 == size()) { throw(std::out_of_range("front() on empty - reference front() - msevector")); }
+		typename base_class::reference front() {	// return first element of mutable sequence
+			if (0 == size()) { throw(std::out_of_range("front() on empty - typename base_class::reference front() - msevector")); }
 			return base_class::front();
 		}
-		const_reference front() const {	// return first element of nonmutable sequence
-			if (0 == size()) { throw(std::out_of_range("front() on empty - const_reference front() - msevector")); }
+		typename base_class::const_reference front() const {	// return first element of nonmutable sequence
+			if (0 == size()) { throw(std::out_of_range("front() on empty - typename base_class::const_reference front() - msevector")); }
 			return base_class::front();
 		}
-		reference back() {	// return last element of mutable sequence
-			if (0 == size()) { throw(std::out_of_range("back() on empty - reference back() - msevector")); }
+		typename base_class::reference back() {	// return last element of mutable sequence
+			if (0 == size()) { throw(std::out_of_range("back() on empty - typename base_class::reference back() - msevector")); }
 			return base_class::back();
 		}
-		const_reference back() const {	// return last element of nonmutable sequence
-			if (0 == size()) { throw(std::out_of_range("back() on empty - const_reference back() - msevector")); }
+		typename base_class::const_reference back() const {	// return last element of nonmutable sequence
+			if (0 == size()) { throw(std::out_of_range("back() on empty - typename base_class::const_reference back() - msevector")); }
 			return base_class::back();
 		}
 		void push_back(_Ty&& _X) {
@@ -285,22 +294,23 @@ namespace mse {
 			m_debug_size = size();
 			m_mmitset.reset();
 		}
-		void assign(size_type _N, const _Ty& _X = _Ty()) {
+		void assign(size_t _N, const _Ty& _X = _Ty()) {
 			base_class::assign(_N, _X);
 			m_debug_size = size();
 			m_mmitset.reset();
 		}
-		iterator insert(iterator _P, _Ty&& _X) {
+		typename base_class::iterator insert(typename base_class::iterator _P, _Ty&& _X) {
 			return (emplace(_P, std::move(_X)));
 		}
-		iterator insert(iterator _P, const _Ty& _X = _Ty()) {
-			CInt di = std::distance(base_class::begin(), _P); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
+		typename base_class::iterator insert(typename base_class::iterator _P, const _Ty& _X = _Ty()) {
+			CInt di = std::distance(base_class::begin(), _P);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
 
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			iterator retval = base_class::insert(_P, _X);
+			typename base_class::iterator retval = base_class::insert(_P, _X);
 			m_debug_size = size();
 
 			assert((original_size + 1) == CSize_t((*this).size()));
@@ -313,20 +323,23 @@ namespace mse {
 			}
 			return retval;
 		}
+
+#if !(defined(__GNUC__) || defined(__GNUG__))
 #ifndef MSVC2010_COMPATIBILE
-		iterator
+		typename base_class::iterator
 #else /*MSVC2010_COMPATIBILE*/
 		void
 #endif /*MSVC2010_COMPATIBILE*/
-			insert(const_iterator _P, size_type _M, const _Ty& _X) {
-			CInt di = std::distance(base_class::cbegin(), _P); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
+			insert(typename base_class::const_iterator _P, size_t _M, const _Ty& _X) {
+				CInt di = std::distance(base_class::cbegin(), _P);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
 
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
 #ifndef MSVC2010_COMPATIBILE
-			iterator retval = 
+			typename base_class::iterator retval =
 #endif /*MSVC2010_COMPATIBILE*/
 				base_class::insert(_P, _M, _X);
 			m_debug_size = size();
@@ -345,21 +358,23 @@ namespace mse {
 			return retval;
 #endif /*MSVC2010_COMPATIBILE*/
 		}
-		template<class _Iter>
+		template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-		typename std::enable_if<_mse_Is_iterator<_Iter>::value, iterator>::type
+		//>typename std::enable_if<_mse_Is_iterator<_Iter>::value, typename base_class::iterator>::type
+		, class = _mse_RequireInputIter<_Iter> > typename base_class::iterator
 #else /*MSVC2010_COMPATIBILE*/
-		typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+		>typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
 #endif /*MSVC2010_COMPATIBILE*/
-			insert(const_iterator _Where, _Iter _First, _Iter _Last) {	// insert [_First, _Last) at _Where
-				CInt di = std::distance(base_class::cbegin(), _Where); CSize_t d = di;
-				if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
+			insert(typename base_class::const_iterator _Where, _Iter _First, _Iter _Last) {	// insert [_First, _Last) at _Where
+				CInt di = std::distance(base_class::cbegin(), _Where);
+				CSize_t d(di);
+				if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
 
 				auto _M = CInt(std::distance(_First, _Last));
 				auto original_size = CSize_t((*this).size());
 				auto original_capacity = CSize_t((*this).capacity());
 
-				//if (0 > _M) { throw(std::out_of_range("invalid argument - iterator insert() - msevector")); }
+				//if (0 > _M) { throw(std::out_of_range("invalid argument - typename base_class::iterator insert() - msevector")); }
 #ifndef MSVC2010_COMPATIBILE
 				auto retval = 
 #endif /*MSVC2010_COMPATIBILE*/
@@ -380,6 +395,63 @@ namespace mse {
 				return retval;
 #endif /*MSVC2010_COMPATIBILE*/
 			}
+
+#else /*!(defined(__GNUC__) || defined(__GNUG__))*/
+
+		/*typename base_class::iterator*/
+		void
+			/* g++4.8 seems to be (incorrectly) using the c++98 version of this insert function instead of the c++11 version. */
+			insert(typename base_class::/*const_*/iterator _P, size_t _M, const _Ty& _X) {
+				CInt di = std::distance(base_class::/*c*/begin(), _P);
+				CSize_t d(di);
+				if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
+
+				auto original_size = CSize_t((*this).size());
+				auto original_capacity = CSize_t((*this).capacity());
+
+				/*typename base_class::iterator retval =*/
+					base_class::insert(_P, _M, _X);
+				m_debug_size = size();
+
+				assert((original_size + _M) == CSize_t((*this).size()));
+				/*assert(d == std::distance(base_class::begin(), retval));*/
+				m_mmitset.shift_inclusive_range(d, original_size, _M);
+				auto new_capacity = CSize_t((*this).capacity());
+				bool realloc_occured = (new_capacity != original_capacity);
+				if (realloc_occured) {
+					m_mmitset.sync_iterators_to_index();
+				}
+				/*return retval;*/
+			}
+		template<class _Iter
+			//>typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			, class = _mse_RequireInputIter<_Iter> > void
+		insert(typename base_class::/*const_*/iterator _Where, _Iter _First, _Iter _Last) {	// insert [_First, _Last) at _Where
+				CInt di = std::distance(base_class::/*c*/begin(), _Where);
+				CSize_t d(di);
+				if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
+
+				auto _M = CInt(std::distance(_First, _Last));
+				auto original_size = CSize_t((*this).size());
+				auto original_capacity = CSize_t((*this).capacity());
+
+				//if (0 > _M) { throw(std::out_of_range("invalid argument - typename base_class::iterator insert() - msevector")); }
+				/*auto retval =*/
+					base_class::insert(_Where, _First, _Last);
+				m_debug_size = size();
+
+				assert((original_size + _M) == CSize_t((*this).size()));
+				/*assert(d == std::distance(base_class::begin(), retval));*/
+				m_mmitset.shift_inclusive_range(d, original_size, _M);
+				auto new_capacity = CSize_t((*this).capacity());
+				bool realloc_occured = (new_capacity != original_capacity);
+				if (realloc_occured) {
+					m_mmitset.sync_iterators_to_index();
+				}
+				/*return retval;*/
+			}
+#endif /*!(defined(__GNUC__) || defined(__GNUG__))*/
+
 		template<class
 #ifndef MSVC2010_COMPATIBILE
 			...
@@ -414,14 +486,21 @@ namespace mse {
 			...
 #endif /*MSVC2010_COMPATIBILE*/
 			_Valty>
-		iterator emplace(const_iterator _Where, _Valty&&
+#if !(defined(__GNUC__) || defined(__GNUG__))
+		typename base_class::iterator emplace(typename base_class::const_iterator _Where, _Valty&&
 #ifndef MSVC2010_COMPATIBILE
-			...
+		...
 #endif /*MSVC2010_COMPATIBILE*/
-			_Val)
+		_Val)
 		{	// insert by moving _Val at _Where
-			CInt di = std::distance(base_class::cbegin(), _Where); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator emplace() - msevector")); }
+			CInt di = std::distance(base_class::cbegin(), _Where);
+#else /*!(defined(__GNUC__) || defined(__GNUG__))*/
+		typename base_class::iterator emplace(typename base_class::/*const_*/iterator _Where, _Valty&& ..._Val)
+		{	// insert by moving _Val at _Where
+			CInt di = std::distance(base_class::/*c*/begin(), _Where);
+#endif /*!(defined(__GNUC__) || defined(__GNUG__))*/
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator emplace() - msevector")); }
 
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
@@ -443,15 +522,16 @@ namespace mse {
 			}
 			return retval;
 		}
-		iterator erase(iterator _P) {
-			CInt di = std::distance(base_class::begin(), _P); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator erase() - msevector")); }
+		typename base_class::iterator erase(typename base_class::iterator _P) {
+			CInt di = std::distance(base_class::begin(), _P);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator erase() - msevector")); }
 
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			if (end() == _P) { throw(std::out_of_range("invalid argument - iterator erase(iterator _P) - msevector")); }
-			iterator retval = base_class::erase(_P);
+			if (end() == _P) { throw(std::out_of_range("invalid argument - typename base_class::iterator erase(typename base_class::iterator _P) - msevector")); }
+			typename base_class::iterator retval = base_class::erase(_P);
 			m_debug_size = size();
 
 			assert((original_size - 1) == CSize_t((*this).size()));
@@ -467,18 +547,20 @@ namespace mse {
 			}
 			return retval;
 		}
-		iterator erase(iterator _F, iterator _L) {
-			CInt di = std::distance(base_class::begin(), _F); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator erase() - msevector")); }
-			CInt di2 = std::distance(base_class::begin(), _L); CSize_t d2 = di2;
-			if ((0 > di2) || (CSize_t((*this).size()) < di2)) { throw(std::out_of_range("index out of range - iterator erase() - msevector")); }
+		typename base_class::iterator erase(typename base_class::iterator _F, typename base_class::iterator _L) {
+			CInt di = std::distance(base_class::begin(), _F);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator erase() - msevector")); }
+			CInt di2 = std::distance(base_class::begin(), _L);
+			CSize_t d2(di2);
+			if ((0 > di2) || (CSize_t((*this).size()) < di2)) { throw(std::out_of_range("index out of range - typename base_class::iterator erase() - msevector")); }
 
 			auto _M = CInt(std::distance(_F, _L));
 			auto original_size = CSize_t((*this).size());
 			auto original_capacity = CSize_t((*this).capacity());
 
-			if ((end() == _F)/* || (0 > _M)*/) { throw(std::out_of_range("invalid argument - iterator erase(iterator _F, iterator _L) - msevector")); }
-			iterator retval = base_class::erase(_F, _L);
+			if ((end() == _F)/* || (0 > _M)*/) { throw(std::out_of_range("invalid argument - typename base_class::iterator erase(typename base_class::iterator _F, typename base_class::iterator _L) - msevector")); }
+			typename base_class::iterator retval = base_class::erase(_F, _L);
 			m_debug_size = size();
 
 			assert((original_size - _M) == CSize_t((*this).size()));
@@ -512,24 +594,50 @@ namespace mse {
 		}
 
 #ifndef MSVC2010_COMPATIBILE
-		msevector(_XSTD initializer_list<value_type> _Ilist,
-			const _Alloc& _Al = allocator_type())
+		msevector(_XSTD initializer_list<typename base_class::value_type> _Ilist,
+			const _A& _Al = _A())
 			: base_class(_Ilist, _Al), m_mmitset(*this) {	// construct from initializer_list
 			m_debug_size = size();
 		}
-		_Myt& operator=(_XSTD initializer_list<value_type> _Ilist) {	// assign initializer_list
+		_Myt& operator=(_XSTD initializer_list<typename base_class::value_type> _Ilist) {	// assign initializer_list
 			operator=((base_class)_Ilist);
 			m_mmitset.reset();
 			return (*this);
 		}
-		void assign(_XSTD initializer_list<value_type> _Ilist) {	// assign initializer_list
+		void assign(_XSTD initializer_list<typename base_class::value_type> _Ilist) {	// assign initializer_list
 			base_class::assign(_Ilist);
 			m_debug_size = size();
 			m_mmitset.reset();
 		}
-		iterator insert(const_iterator _Where, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
-			CInt di = std::distance(base_class::cbegin(), _Where); CSize_t d = di;
-			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - iterator insert() - msevector")); }
+#if defined(__GNUC__) || defined(__GNUG__)
+		/* g++4.8 seems to be (incorrectly) using the c++98 version of this insert function instead of the c++11 version. */
+		/*typename base_class::iterator*/void insert(typename base_class::/*const_*/iterator _Where, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
+			CInt di = std::distance(base_class::/*c*/begin(), _Where);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
+
+			auto _M = _Ilist.size();
+			auto original_size = CSize_t((*this).size());
+			auto original_capacity = CSize_t((*this).capacity());
+
+			/*auto retval = */base_class::insert(_Where, _Ilist);
+			m_debug_size = size();
+
+			assert((original_size + _M) == CSize_t((*this).size()));
+			/*assert(d == std::distance(base_class::begin(), retval));*/
+			m_mmitset.shift_inclusive_range(d, original_size, _M);
+			auto new_capacity = CSize_t((*this).capacity());
+			bool realloc_occured = (new_capacity != original_capacity);
+			if (realloc_occured) {
+				m_mmitset.sync_iterators_to_index();
+			}
+			/*return retval;*/
+		}
+#else /*defined(__GNUC__) || defined(__GNUG__)*/
+		typename base_class::iterator insert(typename base_class::const_iterator _Where, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
+			CInt di = std::distance(base_class::cbegin(), _Where);
+			CSize_t d(di);
+			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator insert() - msevector")); }
 
 			auto _M = _Ilist.size();
 			auto original_size = CSize_t((*this).size());
@@ -548,18 +656,28 @@ namespace mse {
 			}
 			return retval;
 		}
+#endif /*defined(__GNUC__) || defined(__GNUG__)*/
 #endif /*MSVC2010_COMPATIBILE*/
 
-		size_type m_debug_size;
+		size_t m_debug_size;
 
-		/* Note that, at the moment, mm_const_iterator_type inherits publicly from const_iterator. This is not intended to be a permanent
-		characteristc of mm_const_iterator_type and any reference to, or interpretation of, an mm_const_iterator_type as an const_iterator is (and has
-		always been) depricated. mm_const_iterator_type endeavors to support (and continue to support) the subset of the const_iterator
+		/* Note that, at the moment, mm_const_iterator_type inherits publicly from typename base_class::const_iterator. This is not intended to be a permanent
+		characteristc of mm_const_iterator_type and any reference to, or interpretation of, an mm_const_iterator_type as an typename base_class::const_iterator is (and has
+		always been) depricated. mm_const_iterator_type endeavors to support (and continue to support) the subset of the typename base_class::const_iterator
 		interface that is compatible with the security/safety goals of mm_const_iterator_type.
-		In particular, keep in mind that const_iterator does not have a virtual destructor, so deallocating an mm_const_iterator_type as an
-		const_iterator would result in memory leaks. */
-		class mm_const_iterator_type : public const_iterator {
+		In particular, keep in mind that typename base_class::const_iterator does not have a virtual destructor, so deallocating an mm_const_iterator_type as an
+		typename base_class::const_iterator would result in memory leaks. */
+		class mm_const_iterator_type : public base_class::const_iterator {
 		public:
+			typedef typename base_class::const_iterator::iterator_category iterator_category;
+			typedef typename base_class::const_iterator::value_type value_type;
+			typedef typename base_class::const_iterator::difference_type difference_type;
+			typedef difference_type distance_type;	// retained
+			typedef typename base_class::const_iterator::pointer pointer;
+			typedef typename base_class::const_iterator::pointer const_pointer;
+			typedef typename base_class::const_iterator::reference reference;
+			typedef typename base_class::const_reference const_reference;
+
 			void reset() { set_to_end_marker(); }
 			bool points_to_an_item() const {
 				if (m_points_to_an_item) { assert((1 <= m_owner_cref.size()) && (m_index < m_owner_cref.size())); return true; }
@@ -580,7 +698,7 @@ namespace mse {
 			bool has_previous() const { return (!points_to_beginning()); }
 			void set_to_beginning() {
 				m_index = 0;
-				const_iterator::operator=(m_owner_cref.cbegin());
+				base_class::const_iterator::operator=(m_owner_cref.cbegin());
 				if (1 <= m_owner_cref.size()) {
 					m_points_to_an_item = true;
 				}
@@ -588,13 +706,13 @@ namespace mse {
 			}
 			void set_to_end_marker() {
 				m_index = m_owner_cref.size();
-				const_iterator::operator=(m_owner_cref.cend());
+				base_class::const_iterator::operator=(m_owner_cref.cend());
 				m_points_to_an_item = false;
 			}
 			void set_to_next() {
 				if (points_to_an_item()) {
 					m_index += 1;
-					const_iterator::operator++();
+					base_class::const_iterator::operator++();
 					if (m_owner_cref.size() <= m_index) {
 						(*this).m_points_to_an_item = false;
 						if (m_owner_cref.size() < m_index) { assert(false); reset(); }
@@ -607,7 +725,7 @@ namespace mse {
 			void set_to_previous() {
 				if (has_previous()) {
 					m_index -= 1;
-					const_iterator::operator--();
+					base_class::const_iterator::operator--();
 					(*this).m_points_to_an_item = true;
 				}
 				else {
@@ -625,7 +743,7 @@ namespace mse {
 				}
 				else {
 					m_index = new_index;
-					const_iterator::operator+=(n);
+					base_class::const_iterator::operator+=(n);
 					if (m_owner_cref.size() <= m_index) {
 						(*this).m_points_to_an_item = false;
 					}
@@ -638,7 +756,7 @@ namespace mse {
 			mm_const_iterator_type& operator +=(difference_type n) { (*this).advance(n); return (*this); }
 			mm_const_iterator_type& operator -=(difference_type n) { (*this).regress(n); return (*this); }
 			mm_const_iterator_type operator+(difference_type n) const {
-				mm_const_iterator_type retval; retval.m_owner_cptr = m_owner_cptr;
+				mm_const_iterator_type retval(*this);
 				retval = (*this);
 				retval.advance(n);
 				return retval;
@@ -646,7 +764,7 @@ namespace mse {
 			mm_const_iterator_type operator-(difference_type n) const { return ((*this) + (-n)); }
 			difference_type operator-(const mm_const_iterator_type &rhs) const {
 				if ((&(rhs.m_owner_cref)) != (&((*this).m_owner_cref))) { throw(std::out_of_range("invalid argument - difference_type operator-(const mm_const_iterator_type &rhs) const - msevector::mm_const_iterator_type")); }
-				auto retval = (static_cast<const const_iterator&>(*this) - static_cast<const const_iterator&>(rhs));
+				auto retval = (static_cast<const typename base_class::const_iterator&>(*this) - static_cast<const typename base_class::const_iterator&>(rhs));
 				assert((int)(m_owner_cref.size()) >= retval);
 				return retval;
 			}
@@ -669,8 +787,9 @@ namespace mse {
 			}
 			const_pointer operator->() const {
 				if (points_to_an_item()) {
-					sync_const_iterator_to_index();
-					return const_iterator::operator->();
+					const_cast<mm_const_iterator_type *>(this)->sync_const_iterator_to_index();
+					//sync_const_iterator_to_index();
+					return base_class::const_iterator::operator->();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid const_item_pointer - pointer operator->() const - mm_const_iterator_type - msevector"));
@@ -678,9 +797,9 @@ namespace mse {
 			}
 			const_reference operator[](difference_type _Off) const { return (*(*this + _Off)); }
 			/*
-			mm_const_iterator_type& operator=(const const_iterator& _Right_cref)
+			mm_const_iterator_type& operator=(const typename base_class::const_iterator& _Right_cref)
 			{
-			CInt d = std::distance<iterator>(m_owner_cref.cbegin(), _Right_cref);
+			CInt d = std::distance<typename base_class::iterator>(m_owner_cref.cbegin(), _Right_cref);
 			if ((0 <= d) && (m_owner_cref.size() >= d)) {
 			if (m_owner_cref.size() == d) {
 			assert(m_owner_cref.cend() == _Right_cref);
@@ -689,10 +808,10 @@ namespace mse {
 			m_points_to_an_item = true;
 			}
 			m_index = CSize_t(d);
-			const_iterator::operator=(_Right_cref);
+			base_class::const_iterator::operator=(_Right_cref);
 			}
 			else {
-			throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_const_iterator_type& operator=(const const_iterator& _Right_cref) - mm_const_iterator_type - msevector"));
+			throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_const_iterator_type& operator=(const typename base_class::const_iterator& _Right_cref) - mm_const_iterator_type - msevector"));
 			}
 			return (*this);
 			}
@@ -703,10 +822,10 @@ namespace mse {
 					assert((*this).m_owner_cref.size() >= _Right_cref.m_index);
 					(*this).m_points_to_an_item = _Right_cref.m_points_to_an_item;
 					(*this).m_index = _Right_cref.m_index;
-					const_iterator::operator=(_Right_cref);
+					base_class::const_iterator::operator=(_Right_cref);
 				}
 				else {
-					throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_const_iterator_type& operator=(const iterator& _Right_cref) - mm_const_iterator_type - msevector"));
+					throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_const_iterator_type& operator=(const typename base_class::iterator& _Right_cref) - mm_const_iterator_type - msevector"));
 				}
 				return (*this);
 			}
@@ -747,23 +866,31 @@ namespace mse {
 			mm_const_iterator_type(const mm_const_iterator_type& src_cref) : m_owner_cref(src_cref.m_owner_cref) { (*this) = src_cref; }
 			void sync_const_iterator_to_index() {
 				assert(m_owner_cref.size() >= (*this).m_index);
-				const_iterator::operator=(m_owner_cref.cbegin());
-				const_iterator::operator+=(mse::as_a_size_t(m_index));
+				base_class::const_iterator::operator=(m_owner_cref.cbegin());
+				base_class::const_iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CBool m_points_to_an_item;
 			mse::CSize_t m_index;
 			const _Myt& m_owner_cref;
 			friend class mm_iterator_set_type;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
+			friend class mm_iterator_type;
 		};
-		/* Note that, at the moment, mm_iterator_type inherits publicly from iterator. This is not intended to be a permanent
-		characteristc of mm_iterator_type and any reference to, or interpretation of, an mm_iterator_type as an iterator is (and has
-		always been) depricated. mm_iterator_type endeavors to support (and continue to support) the subset of the iterator
+		/* Note that, at the moment, mm_iterator_type inherits publicly from base_class::iterator. This is not intended to be a permanent
+		characteristc of mm_iterator_type and any reference to, or interpretation of, an mm_iterator_type as an base_class::iterator is (and has
+		always been) depricated. mm_iterator_type endeavors to support (and continue to support) the subset of the base_class::iterator
 		interface that is compatible with the security/safety goals of mm_iterator_type.
-		In particular, keep in mind that iterator does not have a virtual destructor, so deallocating an mm_iterator_type as an
-		iterator would result in memory leaks. */
-		class mm_iterator_type : public iterator {
+		In particular, keep in mind that base_class::iterator does not have a virtual destructor, so deallocating an mm_iterator_type as an
+		base_class::iterator would result in memory leaks. */
+		class mm_iterator_type : public base_class::iterator {
 		public:
+			typedef typename base_class::iterator::iterator_category iterator_category;
+			typedef typename base_class::iterator::value_type value_type;
+			typedef typename base_class::iterator::difference_type difference_type;
+			typedef difference_type distance_type;	// retained
+			typedef typename base_class::iterator::pointer pointer;
+			typedef typename base_class::iterator::reference reference;
+
 			void reset() { set_to_end_marker(); }
 			bool points_to_an_item() const {
 				if (m_points_to_an_item) { assert((1 <= m_owner_ref.size()) && (m_index < m_owner_ref.size())); return true; }
@@ -784,7 +911,7 @@ namespace mse {
 			bool has_previous() const { return (!points_to_beginning()); }
 			void set_to_beginning() {
 				m_index = 0;
-				iterator::operator=(m_owner_ref.begin());
+				base_class::iterator::operator=(m_owner_ref.begin());
 				if (1 <= m_owner_ref.size()) {
 					m_points_to_an_item = true;
 				}
@@ -792,13 +919,13 @@ namespace mse {
 			}
 			void set_to_end_marker() {
 				m_index = m_owner_ref.size();
-				iterator::operator=(m_owner_ref.end());
+				base_class::iterator::operator=(m_owner_ref.end());
 				m_points_to_an_item = false;
 			}
 			void set_to_next() {
 				if (points_to_an_item()) {
 					m_index += 1;
-					iterator::operator++();
+					base_class::iterator::operator++();
 					if (m_owner_ref.size() <= m_index) {
 						(*this).m_points_to_an_item = false;
 						if (m_owner_ref.size() < m_index) { assert(false); reset(); }
@@ -811,7 +938,7 @@ namespace mse {
 			void set_to_previous() {
 				if (has_previous()) {
 					m_index -= 1;
-					iterator::operator--();
+					base_class::iterator::operator--();
 					(*this).m_points_to_an_item = true;
 				}
 				else {
@@ -829,7 +956,7 @@ namespace mse {
 				}
 				else {
 					m_index = new_index;
-					iterator::operator+=(n);
+					base_class::iterator::operator+=(n);
 					if (m_owner_ref.size() <= m_index) {
 						(*this).m_points_to_an_item = false;
 					}
@@ -842,7 +969,7 @@ namespace mse {
 			mm_iterator_type& operator +=(int n) { (*this).advance(n); return (*this); }
 			mm_iterator_type& operator -=(int n) { (*this).regress(n); return (*this); }
 			mm_iterator_type operator+(difference_type n) const {
-				mm_iterator_type retval; retval.m_owner_ptr = m_owner_ptr;
+				mm_iterator_type retval(*this);
 				retval = (*this);
 				retval.advance(n);
 				return retval;
@@ -850,7 +977,7 @@ namespace mse {
 			mm_iterator_type operator-(difference_type n) const { return ((*this) + (-n)); }
 			difference_type operator-(const mm_iterator_type& rhs) const {
 				if ((&rhs.m_owner_ref) != (&(*this).m_owner_ref)) { throw(std::out_of_range("invalid argument - difference_type operator-(const mm_iterator_type& rhs) const - msevector::mm_iterator_type")); }
-				auto retval = (static_cast<const iterator&>(*this) - static_cast<const iterator&>(rhs));
+				auto retval = (static_cast<const typename base_class::iterator&>(*this) - static_cast<const typename base_class::iterator&>(rhs));
 				assert((int)(m_owner_ref.size()) >= retval);
 				return retval;
 			}
@@ -865,7 +992,7 @@ namespace mse {
 			reference item() { return operator*(); }
 			reference previous_item() {
 				if ((*this).has_previous()) {
-					return m_owner_cref.at(m_index - 1);
+					return m_owner_ref.at(m_index - 1);
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid item_pointer - reference previous_item() - mm_const_iterator_type - msevector"));
@@ -874,7 +1001,7 @@ namespace mse {
 			pointer operator->() {
 				if (points_to_an_item()) {
 					sync_iterator_to_index();
-					return iterator::operator->();
+					return base_class::iterator::operator->();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid item_pointer - pointer operator->() - mm_iterator_type - msevector"));
@@ -882,9 +1009,9 @@ namespace mse {
 			}
 			reference operator[](difference_type _Off) { return (*(*this + _Off)); }
 			/*
-			mm_iterator_type& operator=(const iterator& _Right_cref)
+			mm_iterator_type& operator=(const typename base_class::iterator& _Right_cref)
 			{
-			CInt d = std::distance<iterator>(m_owner_ref.begin(), _Right_cref);
+			CInt d = std::distance<typename base_class::iterator>(m_owner_ref.begin(), _Right_cref);
 			if ((0 <= d) && (m_owner_ref.size() >= d)) {
 			if (m_owner_ref.size() == d) {
 			assert(m_owner_ref.end() == _Right_cref);
@@ -893,10 +1020,10 @@ namespace mse {
 			m_points_to_an_item = true;
 			}
 			m_index = CSize_t(d);
-			iterator::operator=(_Right_cref);
+			base_class::iterator::operator=(_Right_cref);
 			}
 			else {
-			throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_iterator_type& operator=(const iterator& _Right_cref) - mm_const_iterator_type - msevector"));
+			throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_iterator_type& operator=(const typename base_class::iterator& _Right_cref) - mm_const_iterator_type - msevector"));
 			}
 			return (*this);
 			}
@@ -907,17 +1034,17 @@ namespace mse {
 					assert((*this).m_owner_ref.size() >= _Right_cref.m_index);
 					(*this).m_points_to_an_item = _Right_cref.m_points_to_an_item;
 					(*this).m_index = _Right_cref.m_index;
-					iterator::operator=(_Right_cref);
+					base_class::iterator::operator=(_Right_cref);
 				}
 				else {
-					throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_iterator_type& operator=(const iterator& _Right_cref) - mm_const_iterator_type - msevector"));
+					throw(std::out_of_range("doesn't seem to be a valid assignment value - mm_iterator_type& operator=(const typename base_class::iterator& _Right_cref) - mm_const_iterator_type - msevector"));
 				}
 				return (*this);
 			}
 			bool operator==(const mm_iterator_type& _Right_cref) const { return ((_Right_cref.m_index == m_index) && (_Right_cref.m_owner_ref == m_owner_ref)); }
 			bool operator!=(const mm_iterator_type& _Right_cref) const { return (!(_Right_cref == (*this))); }
 			bool operator<(const mm_iterator_type& _Right) const {
-				if (&((*this).m_owner_ref) != &(_Right.m_owner_ref)) { throw(std::out_of_range("invalid argument - mm_iterator_type& operator<(const iterator& _Right) - mm_iterator_type - msevector")); }
+				if (&((*this).m_owner_ref) != &(_Right.m_owner_ref)) { throw(std::out_of_range("invalid argument - mm_iterator_type& operator<(const typename base_class::iterator& _Right) - mm_iterator_type - msevector")); }
 				return (m_index < _Right.m_index);
 			}
 			bool operator<=(const mm_iterator_type& _Right) const { return (((*this) < _Right) || (_Right == (*this))); }
@@ -957,14 +1084,14 @@ namespace mse {
 			mm_iterator_type(const mm_iterator_type& src_cref) : m_owner_ref(src_cref.m_owner_ref) { (*this) = src_cref; }
 			void sync_iterator_to_index() {
 				assert(m_owner_ref.size() >= (*this).m_index);
-				iterator::operator=(m_owner_ref.begin());
-				iterator::operator+=(mse::as_a_size_t(m_index));
+				base_class::iterator::operator=(m_owner_ref.begin());
+				base_class::iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CBool m_points_to_an_item;
 			mse::CSize_t m_index;
 			_Myt& m_owner_ref;
 			friend class mm_iterator_set_type;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 
 	private:
@@ -975,7 +1102,7 @@ namespace mse {
 		private:
 			std::shared_ptr<mm_const_iterator_type> m_shptr;
 			CHashKey1 m_key;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 			friend class mm_iterator_set_type;
 		};
 		class mm_iterator_handle_type {
@@ -984,7 +1111,7 @@ namespace mse {
 		private:
 			std::shared_ptr<mm_iterator_type> m_shptr;
 			CHashKey1 m_key;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 			friend class mm_iterator_set_type;
 		};
 
@@ -1031,7 +1158,7 @@ namespace mse {
 				auto shptr = std::shared_ptr<mm_const_iterator_type>(new mm_const_iterator_type(m_owner_ref));
 				auto key = m_next_available_key; m_next_available_key++;
 				mm_const_iterator_handle_type retval(key, shptr);
-				CMMConstIterators::value_type new_item(key, shptr);
+				typename CMMConstIterators::value_type new_item(key, shptr);
 				m_aux_mm_const_iterator_shptrs.insert(new_item);
 				return retval;
 			}
@@ -1050,7 +1177,7 @@ namespace mse {
 				auto shptr = std::shared_ptr<mm_iterator_type>(new mm_iterator_type(m_owner_ref));
 				auto key = m_next_available_key; m_next_available_key++;
 				mm_iterator_handle_type retval(key, shptr);
-				CMMIterators::value_type new_item(key, shptr);
+				typename CMMIterators::value_type new_item(key, shptr);
 				m_aux_mm_iterator_shptrs.insert(new_item);
 				return retval;
 			}
@@ -1084,7 +1211,7 @@ namespace mse {
 
 			_Myt& m_owner_ref;
 
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 		mutable mm_iterator_set_type m_mmitset;
 
@@ -1110,9 +1237,11 @@ namespace mse {
 			typedef typename mm_const_iterator_type::iterator_category iterator_category;
 			typedef typename mm_const_iterator_type::value_type value_type;
 			typedef typename mm_const_iterator_type::difference_type difference_type;
-			typedef typename difference_type distance_type;	// retained
+			typedef difference_type distance_type;	// retained
 			typedef typename mm_const_iterator_type::pointer pointer;
+			typedef typename mm_const_iterator_type::const_pointer const_pointer;
 			typedef typename mm_const_iterator_type::reference reference;
+			typedef typename mm_const_iterator_type::const_reference const_reference;
 
 			cipointer(const _Myt& owner_cref) : m_owner_cref(owner_cref) {
 				mm_const_iterator_handle_type handle = m_owner_cref.allocate_new_const_item_pointer();
@@ -1147,13 +1276,13 @@ namespace mse {
 			cipointer operator++(int) { cipointer _Tmp = *this; ++*this; return (_Tmp); }
 			cipointer& operator --() { const_item_pointer().operator --(); return (*this); }
 			cipointer operator--(int) { cipointer _Tmp = *this; --*this; return (_Tmp); }
-			void advance(typename difference_type n) { const_item_pointer().advance(n); }
-			void regress(typename difference_type n) { const_item_pointer().regress(n); }
+			void advance(difference_type n) { const_item_pointer().advance(n); }
+			void regress(difference_type n) { const_item_pointer().regress(n); }
 			cipointer& operator +=(int n) { const_item_pointer().operator +=(n); return (*this); }
 			cipointer& operator -=(int n) { const_item_pointer().operator -=(n); return (*this); }
 			cipointer operator+(int n) const { auto retval = (*this); retval += n; return retval; }
 			cipointer operator-(int n) const { return ((*this) + (-n)); }
-			typename difference_type operator-(const cipointer& _Right_cref) const { return const_item_pointer() - (_Right_cref.const_item_pointer()); }
+			difference_type operator-(const cipointer& _Right_cref) const { return const_item_pointer() - (_Right_cref.const_item_pointer()); }
 			const_reference operator*() const { return const_item_pointer().operator*(); }
 			const_reference item() const { return operator*(); }
 			const_reference previous_item() const { return const_item_pointer().previous_item(); }
@@ -1171,14 +1300,14 @@ namespace mse {
 		private:
 			const _Myt& m_owner_cref;
 			std::shared_ptr<mm_const_iterator_handle_type> m_handle_shptr;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 		class ipointer {
 		public:
 			typedef typename mm_iterator_type::iterator_category iterator_category;
 			typedef typename mm_iterator_type::value_type value_type;
 			typedef typename mm_iterator_type::difference_type difference_type;
-			typedef typename difference_type distance_type;	// retained
+			typedef difference_type distance_type;	// retained
 			typedef typename mm_iterator_type::pointer pointer;
 			typedef typename mm_iterator_type::reference reference;
 
@@ -1221,13 +1350,13 @@ namespace mse {
 			ipointer operator++(int) { ipointer _Tmp = *this; ++*this; return (_Tmp); }
 			ipointer& operator --() { item_pointer().operator --(); return (*this); }
 			ipointer operator--(int) { ipointer _Tmp = *this; --*this; return (_Tmp); }
-			void advance(typename difference_type n) { item_pointer().advance(n); }
-			void regress(typename difference_type n) { item_pointer().regress(n); }
+			void advance(difference_type n) { item_pointer().advance(n); }
+			void regress(difference_type n) { item_pointer().regress(n); }
 			ipointer& operator +=(int n) { item_pointer().operator +=(n); return (*this); }
 			ipointer& operator -=(int n) { item_pointer().operator -=(n); return (*this); }
 			ipointer operator+(int n) const { auto retval = (*this); retval += n; return retval; }
 			ipointer operator-(int n) const { return ((*this) + (-n)); }
-			typename difference_type operator-(const ipointer& _Right_cref) const { return item_pointer() - (_Right_cref.item_pointer()); }
+			difference_type operator-(const ipointer& _Right_cref) const { return item_pointer() - (_Right_cref.item_pointer()); }
 			reference operator*() const { return item_pointer().operator*(); }
 			reference item() const { return operator*(); }
 			reference previous_item() const { return item_pointer().previous_item(); }
@@ -1245,7 +1374,7 @@ namespace mse {
 		private:
 			_Myt& m_owner_ref;
 			std::shared_ptr<mm_iterator_handle_type> m_handle_shptr;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 
 		ipointer ibegin() {	// return ipointer for beginning of mutable sequence
@@ -1280,20 +1409,20 @@ namespace mse {
 		}
 
 		msevector(const cipointer &start, const cipointer &end, const _A& _Al = _A())
-			: base_class(static_cast<const_iterator>(start.const_item_pointer()), static_cast<const_iterator>(end.const_item_pointer()), _Al), m_mmitset(*this) {
+			: base_class(static_cast<typename base_class::const_iterator>(start.const_item_pointer()), static_cast<typename base_class::const_iterator>(end.const_item_pointer()), _Al), m_mmitset(*this) {
 			m_debug_size = size();
 		}
 		void assign(const mm_const_iterator_type &start, const mm_const_iterator_type &end) {
 			if (start.m_owner_cref != end.m_owner_cref) { throw(std::out_of_range("invalid arguments - void assign(const mm_const_iterator_type &start, const mm_const_iterator_type &end) - msevector")); }
-			const_iterator _F = start;
-			const_iterator _L = end;
+			typename base_class::const_iterator _F = start;
+			typename base_class::const_iterator _L = end;
 			(*this).assign(_F, _L);
 		}
 		void assign_inclusive(const mm_const_iterator_type &first, const mm_const_iterator_type &last) {
 			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void assign_inclusive(const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
 			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void assign_inclusive(const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
-			const_iterator _F = first;
-			const_iterator _L = last;
+			typename base_class::const_iterator _F = first;
+			typename base_class::const_iterator _L = last;
 			_L++;
 			(*this).assign(_F, _L);
 		}
@@ -1303,67 +1432,67 @@ namespace mse {
 		void assign_inclusive(const cipointer &first, const cipointer &last) {
 			assign_inclusive(first.const_item_pointer(), last.const_item_pointer());
 		}
-		void insert_before(mm_iterator_type &pos, size_type _M, const _Ty& _X) {
+		void insert_before(const mm_iterator_type &pos, size_t _M, const _Ty& _X) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, _M, _X);
 		}
-		void insert_before(mm_iterator_type &pos, _Ty&& _X) {
+		void insert_before(const mm_iterator_type &pos, _Ty&& _X) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(pos, 1, std::move(_X));
 		}
-		void insert_before(mm_iterator_type &pos, const _Ty& _X = _Ty()) { (*this).insert(pos, 1, _X); }
-		void insert_before(mm_iterator_type &pos, const mm_const_iterator_type &start, const mm_const_iterator_type &end) {
+		void insert_before(const mm_iterator_type &pos, const _Ty& _X = _Ty()) { (*this).insert(pos, 1, _X); }
+		void insert_before(const mm_iterator_type &pos, const mm_const_iterator_type &start, const mm_const_iterator_type &end) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			if (start.m_owner_cref != end.m_owner_cref) { throw(std::out_of_range("invalid arguments - void insert_before(const mm_const_iterator_type &pos, const mm_const_iterator_type &start, const mm_const_iterator_type &end) - msevector")); }
-			iterator _P = pos;
-			const_iterator _F = start;
-			const_iterator _L = end;
+			typename base_class::iterator _P = pos;
+			typename base_class::const_iterator _F = start;
+			typename base_class::const_iterator _L = end;
 			(*this).insert(_P, _F, _L);
 		}
-		void insert_before_inclusive(mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) {
+		void insert_before_inclusive(const mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
-			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void insert_before_inclusive(mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
-			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void insert_before_inclusive(mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
-			iterator _P = pos;
-			const_iterator _F = first;
-			const_iterator _L = last;
+			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void insert_before_inclusive(const mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
+			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void insert_before_inclusive(const mm_iterator_type &pos, const mm_const_iterator_type &first, const mm_const_iterator_type &last) - msevector")); }
+			typename base_class::iterator _P = pos;
+			typename base_class::const_iterator _F = first;
+			typename base_class::const_iterator _L = last;
 			_L++;
 			(*this).insert(_P, _F, _L);
 		}
 #ifndef MSVC2010_COMPATIBILE
-		void insert_before(mm_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
+		void insert_before(const mm_iterator_type &pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, _Ilist);
 		}
 #endif /*MSVC2010_COMPATIBILE*/
-		ipointer insert_before(ipointer &pos, size_type _M, const _Ty& _X) {
+		ipointer insert_before(const ipointer &pos, size_t _M, const _Ty& _X) {
 			CSize_t original_pos = pos.position();
 			insert_before(pos.item_pointer(), _M, _X);
 			ipointer retval(*this); retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ipointer insert_before(ipointer &pos, _Ty&& _X) {
+		ipointer insert_before(const ipointer &pos, _Ty&& _X) {
 			CSize_t original_pos = pos.position();
 			insert_before(pos.item_pointer(), std::move(_X));
 			ipointer retval(*this); retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ipointer insert_before(ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
-		ipointer insert_before(ipointer &pos, const cipointer &start, const cipointer &end) {
+		ipointer insert_before(const ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
+		ipointer insert_before(const ipointer &pos, const cipointer &start, const cipointer &end) {
 			CSize_t original_pos = pos.position();
 			insert_before(pos.item_pointer(), start.const_item_pointer(), end.const_item_pointer());
 			ipointer retval(*this); retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ipointer insert_before_inclusive(ipointer &pos, const cipointer &first, const cipointer &last) {
+		ipointer insert_before_inclusive(const ipointer &pos, const cipointer &first, const cipointer &last) {
 			auto end = last; end.set_to_next();
 			return insert_before(pos, first, end);
 		}
 #ifndef MSVC2010_COMPATIBILE
-		ipointer insert_before(ipointer &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
+		ipointer insert_before(const ipointer &pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
 			CSize_t original_pos = pos.position();
 			(*this).insert(pos.item_pointer(), _Ilist);
 			ipointer retval(*this); retval.advance((CInt)original_pos);
@@ -1371,89 +1500,98 @@ namespace mse {
 		}
 #endif /*MSVC2010_COMPATIBILE*/
 		void insert_before(CSize_t pos, _Ty&& _X) {
-			iterator _P = (*this).begin() + pos.as_a_size_t();
+			typename base_class::iterator _P = (*this).begin() + mse::as_a_size_t(pos);
 			(*this).insert(_P, std::move(_X));
 		}
 		void insert_before(CSize_t pos, const _Ty& _X = _Ty()) {
-			iterator _P = (*this).begin() + pos.as_a_size_t();
+			typename base_class::iterator _P = (*this).begin() + mse::as_a_size_t(pos);
 			(*this).insert(_P, _X);
 		}
-		void insert_before(CSize_t pos, size_type _M, const _Ty& _X) {
-			iterator _P = (*this).begin() + pos.as_a_size_t();
+		void insert_before(CSize_t pos, size_t _M, const _Ty& _X) {
+			typename base_class::iterator _P = (*this).begin() + mse::as_a_size_t(pos);
 			(*this).insert(_P, _M, _X);
 		}
 #ifndef MSVC2010_COMPATIBILE
-		void insert_before(CSize_t pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
-			iterator _P = (*this).begin() + pos.as_a_size_t();
+		void insert_before(CSize_t pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
+			typename base_class::iterator _P = (*this).begin() + mse::as_a_size_t(pos);
 			(*this).insert(_P, _Ilist);
 		}
 #endif /*MSVC2010_COMPATIBILE*/
 		/* These insert() functions are just aliases for their corresponding insert_before() functions. */
-		ipointer insert(ipointer &pos, size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
-		ipointer insert(ipointer &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
-		ipointer insert(ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
-		ipointer insert(ipointer &pos, const cipointer &start, const cipointer &end) { return insert_before(pos, start, end); }
+		ipointer insert(const ipointer &pos, size_t _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
+		ipointer insert(const ipointer &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
+		ipointer insert(const ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
+		ipointer insert(const ipointer &pos, const cipointer &start, const cipointer &end) { return insert_before(pos, start, end); }
 #ifndef MSVC2010_COMPATIBILE
-		ipointer insert(ipointer &pos, _XSTD initializer_list<value_type> _Ilist) { return insert_before(pos, _Ilist); }
+		ipointer insert(const ipointer &pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) { return insert_before(pos, _Ilist); }
 #endif /*MSVC2010_COMPATIBILE*/
-		void erase(mm_iterator_type &pos) {
+		void erase(const mm_iterator_type &pos) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).erase(_P);
 		}
-		void erase(mm_iterator_type &start, mm_iterator_type &end) {
+		void erase(const mm_iterator_type &start, const mm_iterator_type &end) {
 			if (start.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
 			if (end.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
-			iterator _F = start;
-			iterator _L = end;
+			typename base_class::iterator _F = start;
+			typename base_class::iterator _L = end;
 			(*this).erase(_F, _L);
 		}
-		void erase_inclusive(mm_iterator_type &first, mm_iterator_type &last) {
+		void erase_inclusive(const mm_iterator_type &first, const mm_iterator_type &last) {
 			if (first.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase_inclusive() - msevector")); }
 			if (last.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase_inclusive() - msevector")); }
 			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void erase_inclusive() - msevector")); }
-			iterator _F = first;
-			iterator _L = last;
+			typename base_class::iterator _F = first;
+			typename base_class::iterator _L = last;
 			_L++;
 			(*this).erase(_F, _L);
 		}
-		ipointer erase(ipointer &pos) {
+		ipointer erase(const ipointer &pos) {
 			auto retval = pos;
 			//ipointer retval(*this); retval = pos;
 			retval.set_to_next();
 			erase(pos.item_pointer());
 			return retval;
 		}
-		ipointer erase(ipointer &start, ipointer &end) {
+		ipointer erase(const ipointer &start, const ipointer &end) {
 			auto retval = end;
 			erase(start.item_pointer(), end.item_pointer());
 			return retval;
 		}
-		ipointer erase_inclusive(ipointer &first, ipointer &last) {
+		ipointer erase_inclusive(const ipointer &first, const ipointer &last) {
 			auto end = last; end.set_to_next();
 			return erase(first, end);
 		}
-		void erase_previous_item(mm_iterator_type &pos) {
+		void erase_previous_item(const mm_iterator_type &pos) {
 			if (pos.m_owner_ref != (*this)) { throw(std::out_of_range("invalid arguments - void erase_previous_item() - msevector")); }
 			if (!(pos.has_previous())) { throw(std::out_of_range("invalid arguments - void erase_previous_item() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			_P--;
 			(*this).erase(_P);
 		}
-		ipointer erase_previous_item(ipointer &pos) {
+		ipointer erase_previous_item(const ipointer &pos) {
 			erase_previous_item(pos.item_pointer());
 			return pos;
 		}
 
 
-		/* Note that, at the moment, ss_const_iterator_type inherits publicly from const_iterator. This is not intended to be a permanent
-		characteristc of ss_const_iterator_type and any reference to, or interpretation of, an ss_const_iterator_type as an const_iterator is (and has
-		always been) depricated. ss_const_iterator_type endeavors to support (and continue to support) the subset of the const_iterator
+		/* Note that, at the moment, ss_const_iterator_type inherits publicly from base_class::const_iterator. This is not intended to be a permanent
+		characteristc of ss_const_iterator_type and any reference to, or interpretation of, an ss_const_iterator_type as an base_class::const_iterator is (and has
+		always been) depricated. ss_const_iterator_type endeavors to support (and continue to support) the subset of the base_class::const_iterator
 		interface that is compatible with the security/safety goals of ss_const_iterator_type.
-		In particular, keep in mind that const_iterator does not have a virtual destructor, so deallocating an ss_const_iterator_type as an
-		const_iterator would result in memory leaks. */
-		class ss_const_iterator_type : public const_iterator {
+		In particular, keep in mind that base_class::const_iterator does not have a virtual destructor, so deallocating an ss_const_iterator_type as an
+		base_class::const_iterator would result in memory leaks. */
+		class ss_const_iterator_type : public base_class::const_iterator {
 		public:
+			typedef typename base_class::const_iterator::iterator_category iterator_category;
+			typedef typename base_class::const_iterator::value_type value_type;
+			typedef typename base_class::const_iterator::difference_type difference_type;
+			typedef difference_type distance_type;	// retained
+			typedef typename base_class::const_iterator::pointer pointer;
+			typedef typename base_class::const_pointer const_pointer;
+			typedef typename base_class::const_iterator::reference reference;
+			typedef typename base_class::const_reference const_reference;
+
 			ss_const_iterator_type() {}
 			void reset() { set_to_end_marker(); }
 			bool points_to_an_item() const {
@@ -1483,16 +1621,16 @@ namespace mse {
 			bool has_previous() const { return (!points_to_beginning()); }
 			void set_to_beginning() {
 				m_index = 0;
-				const_iterator::operator=(m_owner_cptr->cbegin());
+				base_class::const_iterator::operator=(m_owner_cptr->cbegin());
 			}
 			void set_to_end_marker() {
 				m_index = m_owner_cptr->size();
-				const_iterator::operator=(m_owner_cptr->cend());
+				base_class::const_iterator::operator=(m_owner_cptr->cend());
 			}
 			void set_to_next() {
 				if (points_to_an_item()) {
 					m_index += 1;
-					const_iterator::operator++();
+					base_class::const_iterator::operator++();
 					if (m_owner_cptr->size() <= m_index) {
 						if (m_owner_cptr->size() < m_index) { assert(false); reset(); }
 					}
@@ -1504,7 +1642,7 @@ namespace mse {
 			void set_to_previous() {
 				if (has_previous()) {
 					m_index -= 1;
-					const_iterator::operator--();
+					base_class::const_iterator::operator--();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid const_item_pointer - void set_to_previous() - ss_const_iterator_type - msevector"));
@@ -1521,7 +1659,7 @@ namespace mse {
 				}
 				else {
 					m_index = new_index;
-					const_iterator::operator+=(n);
+					base_class::const_iterator::operator+=(n);
 				}
 			}
 			void regress(difference_type n) { advance(-n); }
@@ -1536,7 +1674,7 @@ namespace mse {
 			ss_const_iterator_type operator-(difference_type n) const { return ((*this) + (-n)); }
 			difference_type operator-(const ss_const_iterator_type &rhs) const {
 				if (rhs.m_owner_cptr != (*this).m_owner_cptr) { throw(std::out_of_range("invalid argument - difference_type operator-(const ss_const_iterator_type &rhs) const - msevector::ss_const_iterator_type")); }
-				auto retval = (static_cast<const const_iterator&>(*this) - static_cast<const const_iterator&>(rhs));
+				auto retval = (static_cast<const typename base_class::const_iterator&>(*this) - static_cast<const typename base_class::const_iterator&>(rhs));
 				assert((int)((*m_owner_cptr).size()) >= retval);
 				return retval;
 			}
@@ -1559,8 +1697,9 @@ namespace mse {
 			}
 			const_pointer operator->() const {
 				if (points_to_an_item()) {
-					sync_const_iterator_to_index();
-					return const_iterator::operator->();
+					const_cast<ss_const_iterator_type *>(this)->sync_const_iterator_to_index();
+					//sync_const_iterator_to_index();
+					return base_class::const_iterator::operator->();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid const_item_pointer - pointer operator->() const - ss_const_iterator_type - msevector"));
@@ -1568,18 +1707,18 @@ namespace mse {
 			}
 			const_reference operator[](difference_type _Off) const { return (*(*this + _Off)); }
 			/*
-			ss_const_iterator_type& operator=(const const_iterator& _Right_cref)
+			ss_const_iterator_type& operator=(const typename base_class::const_iterator& _Right_cref)
 			{
-			CInt d = std::distance<iterator>(m_owner_cptr->cbegin(), _Right_cref);
+			CInt d = std::distance<typename base_class::iterator>(m_owner_cptr->cbegin(), _Right_cref);
 			if ((0 <= d) && (m_owner_cptr->size() >= d)) {
 			if (m_owner_cptr->size() == d) {
 			assert(m_owner_cptr->cend() == _Right_cref);
 			}
 			m_index = CSize_t(d);
-			const_iterator::operator=(_Right_cref);
+			base_class::const_iterator::operator=(_Right_cref);
 			}
 			else {
-			throw(std::out_of_range("doesn't seem to be a valid assignment value - ss_const_iterator_type& operator=(const const_iterator& _Right_cref) - ss_const_iterator_type - msevector"));
+			throw(std::out_of_range("doesn't seem to be a valid assignment value - ss_const_iterator_type& operator=(const typename base_class::const_iterator& _Right_cref) - ss_const_iterator_type - msevector"));
 			}
 			return (*this);
 			}
@@ -1587,7 +1726,7 @@ namespace mse {
 			ss_const_iterator_type& operator=(const ss_const_iterator_type& _Right_cref) {
 				((*this).m_owner_cptr) = _Right_cref.m_owner_cptr;
 				(*this).m_index = _Right_cref.m_index;
-				const_iterator::operator=(_Right_cref);
+				base_class::const_iterator::operator=(_Right_cref);
 				return (*this);
 			}
 			bool operator==(const ss_const_iterator_type& _Right_cref) const { return ((_Right_cref.m_index == m_index) && (_Right_cref.m_owner_cptr == m_owner_cptr)); }
@@ -1625,21 +1764,28 @@ namespace mse {
 		private:
 			void sync_const_iterator_to_index() {
 				assert(m_owner_cptr->size() >= (*this).m_index);
-				const_iterator::operator=(m_owner_cptr->cbegin());
-				const_iterator::operator+=(mse::as_a_size_t(m_index));
+				base_class::const_iterator::operator=(m_owner_cptr->cbegin());
+				base_class::const_iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CSize_t m_index;
 			TConstNullInitialized<_Myt> m_owner_cptr;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
-		/* Note that, at the moment, ss_iterator_type inherits publicly from iterator. This is not intended to be a permanent
-		characteristc of ss_iterator_type and any reference to, or interpretation of, an ss_iterator_type as an iterator is (and has
-		always been) depricated. ss_iterator_type endeavors to support (and continue to support) the subset of the iterator
+		/* Note that, at the moment, ss_iterator_type inherits publicly from base_class::iterator. This is not intended to be a permanent
+		characteristc of ss_iterator_type and any reference to, or interpretation of, an ss_iterator_type as an base_class::iterator is (and has
+		always been) depricated. ss_iterator_type endeavors to support (and continue to support) the subset of the base_class::iterator
 		interface that is compatible with the security/safety goals of ss_iterator_type.
-		In particular, keep in mind that iterator does not have a virtual destructor, so deallocating an ss_iterator_type as an
-		iterator would result in memory leaks. */
-		class ss_iterator_type : public iterator {
+		In particular, keep in mind that base_class::iterator does not have a virtual destructor, so deallocating an ss_iterator_type as an
+		base_class::iterator would result in memory leaks. */
+		class ss_iterator_type : public base_class::iterator {
 		public:
+			typedef typename base_class::iterator::iterator_category iterator_category;
+			typedef typename base_class::iterator::value_type value_type;
+			typedef typename base_class::iterator::difference_type difference_type;
+			typedef difference_type distance_type;	// retained
+			typedef typename base_class::iterator::pointer pointer;
+			typedef typename base_class::iterator::reference reference;
+
 			ss_iterator_type() {}
 			void reset() { set_to_end_marker(); }
 			bool points_to_an_item() const {
@@ -1669,16 +1815,16 @@ namespace mse {
 			bool has_previous() const { return (!points_to_beginning()); }
 			void set_to_beginning() {
 				m_index = 0;
-				iterator::operator=(m_owner_ptr->begin());
+				base_class::iterator::operator=(m_owner_ptr->begin());
 			}
 			void set_to_end_marker() {
 				m_index = m_owner_ptr->size();
-				iterator::operator=(m_owner_ptr->end());
+				base_class::iterator::operator=(m_owner_ptr->end());
 			}
 			void set_to_next() {
 				if (points_to_an_item()) {
 					m_index += 1;
-					iterator::operator++();
+					base_class::iterator::operator++();
 					if (m_owner_ptr->size() <= m_index) {
 						if (m_owner_ptr->size() < m_index) { assert(false); reset(); }
 					}
@@ -1690,7 +1836,7 @@ namespace mse {
 			void set_to_previous() {
 				if (has_previous()) {
 					m_index -= 1;
-					iterator::operator--();
+					base_class::iterator::operator--();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid item_pointer - void set_to_previous() - ss_iterator_type - msevector"));
@@ -1707,7 +1853,7 @@ namespace mse {
 				}
 				else {
 					m_index = new_index;
-					iterator::operator+=(n);
+					base_class::iterator::operator+=(n);
 				}
 			}
 			void regress(difference_type n) { advance(-n); }
@@ -1722,7 +1868,7 @@ namespace mse {
 			ss_iterator_type operator-(difference_type n) const { return ((*this) + (-n)); }
 			difference_type operator-(const ss_iterator_type& rhs) const {
 				if (rhs.m_owner_ptr != (*this).m_owner_ptr) { throw(std::out_of_range("invalid argument - difference_type operator-(const ss_iterator_type& rhs) const - msevector::ss_iterator_type")); }
-				auto retval = (static_cast<const iterator&>(*this) - static_cast<const iterator&>(rhs));
+				auto retval = (static_cast<const typename base_class::iterator&>(*this) - static_cast<const typename base_class::iterator&>(rhs));
 				assert((int)((*m_owner_ptr).size()) >= retval);
 				return retval;
 			}
@@ -1737,7 +1883,7 @@ namespace mse {
 			reference item() { return operator*(); }
 			reference previous_item() {
 				if ((*this).has_previous()) {
-					return m_owner_cref.at(m_index - 1);
+					return m_owner_ptr->at(m_index - 1);
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid item_pointer - reference previous_item() - ss_const_iterator_type - msevector"));
@@ -1746,7 +1892,7 @@ namespace mse {
 			pointer operator->() {
 				if (points_to_an_item()) {
 					sync_iterator_to_index();
-					return iterator::operator->();
+					return base_class::iterator::operator->();
 				}
 				else {
 					throw(std::out_of_range("attempt to use invalid item_pointer - pointer operator->() - ss_iterator_type - msevector"));
@@ -1754,18 +1900,18 @@ namespace mse {
 			}
 			reference operator[](difference_type _Off) { return (*(*this + _Off)); }
 			/*
-			ss_iterator_type& operator=(const iterator& _Right_cref)
+			ss_iterator_type& operator=(const typename base_class::iterator& _Right_cref)
 			{
-			CInt d = std::distance<iterator>(m_owner_ptr->begin(), _Right_cref);
+			CInt d = std::distance<typename base_class::iterator>(m_owner_ptr->begin(), _Right_cref);
 			if ((0 <= d) && (m_owner_ptr->size() >= d)) {
 			if (m_owner_ptr->size() == d) {
 			assert(m_owner_ptr->end() == _Right_cref);
 			}
 			m_index = CSize_t(d);
-			iterator::operator=(_Right_cref);
+			base_class::iterator::operator=(_Right_cref);
 			}
 			else {
-			throw(std::out_of_range("doesn't seem to be a valid assignment value - ss_iterator_type& operator=(const iterator& _Right_cref) - ss_const_iterator_type - msevector"));
+			throw(std::out_of_range("doesn't seem to be a valid assignment value - ss_iterator_type& operator=(const typename base_class::iterator& _Right_cref) - ss_const_iterator_type - msevector"));
 			}
 			return (*this);
 			}
@@ -1773,7 +1919,7 @@ namespace mse {
 			ss_iterator_type& operator=(const ss_iterator_type& _Right_cref) {
 				((*this).m_owner_ptr) = _Right_cref.m_owner_ptr;
 				(*this).m_index = _Right_cref.m_index;
-				const_iterator::operator=(_Right_cref);
+				base_class::iterator::operator=(_Right_cref);
 				return (*this);
 			}
 			bool operator==(const ss_iterator_type& _Right_cref) const { return ((_Right_cref.m_index == m_index) && (_Right_cref.m_owner_ptr == m_owner_ptr)); }
@@ -1819,155 +1965,155 @@ namespace mse {
 		private:
 			void sync_iterator_to_index() {
 				assert(m_owner_ptr->size() >= (*this).m_index);
-				iterator::operator=(m_owner_ptr->begin());
-				iterator::operator+=(mse::as_a_size_t(m_index));
+				base_class::iterator::operator=(m_owner_ptr->begin());
+				base_class::iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CSize_t m_index;
 			TNullInitialized<_Myt> m_owner_ptr;
-			friend class _Myt;
+			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 		typedef std::reverse_iterator<ss_iterator_type> ss_reverse_iterator_type;
 		typedef std::reverse_iterator<ss_const_iterator_type> ss_const_reverse_iterator_type;
 
 		ss_iterator_type ss_begin()
-		{	// return iterator for beginning of mutable sequence
+		{	// return base_class::iterator for beginning of mutable sequence
 			ss_iterator_type retval; retval.m_owner_ptr = this;
 			retval.set_to_beginning();
 			return retval;
 		}
 
 		ss_const_iterator_type ss_begin() const
-		{	// return iterator for beginning of nonmutable sequence
+		{	// return base_class::iterator for beginning of nonmutable sequence
 			ss_const_iterator_type retval; retval.m_owner_cptr = this;
 			retval.set_to_beginning();
 			return retval;
 		}
 
 		ss_iterator_type ss_end()
-		{	// return iterator for end of mutable sequence
+		{	// return base_class::iterator for end of mutable sequence
 			ss_iterator_type retval; retval.m_owner_ptr = this;
 			retval.set_to_end_marker();
 			return retval;
 		}
 
 		ss_const_iterator_type ss_end() const
-		{	// return iterator for end of nonmutable sequence
+		{	// return base_class::iterator for end of nonmutable sequence
 			ss_const_iterator_type retval; retval.m_owner_cptr = this;
 			retval.set_to_set_to_end_marker();
 			return retval;
 		}
 
 		ss_const_iterator_type ss_cbegin() const
-		{	// return iterator for beginning of nonmutable sequence
+		{	// return base_class::iterator for beginning of nonmutable sequence
 			ss_const_iterator_type retval; retval.m_owner_cptr = this;
 			retval.set_to_beginning();
 			return retval;
 		}
 
 		ss_const_iterator_type ss_cend() const
-		{	// return iterator for end of nonmutable sequence
+		{	// return base_class::iterator for end of nonmutable sequence
 			ss_const_iterator_type retval; retval.m_owner_cptr = this;
 			retval.set_to_set_to_end_marker();
 			return retval;
 		}
 
 		ss_const_reverse_iterator_type ss_crbegin() const
-		{	// return iterator for beginning of reversed nonmutable sequence
+		{	// return base_class::iterator for beginning of reversed nonmutable sequence
 			return (ss_rbegin());
 		}
 
 		ss_const_reverse_iterator_type ss_crend() const
-		{	// return iterator for end of reversed nonmutable sequence
+		{	// return base_class::iterator for end of reversed nonmutable sequence
 			return (ss_rend());
 		}
 
 		ss_reverse_iterator_type ss_rbegin()
-		{	// return iterator for beginning of reversed mutable sequence
+		{	// return base_class::iterator for beginning of reversed mutable sequence
 			return (reverse_iterator(ss_end()));
 		}
 
 		ss_const_reverse_iterator_type ss_rbegin() const
-		{	// return iterator for beginning of reversed nonmutable sequence
+		{	// return base_class::iterator for beginning of reversed nonmutable sequence
 			return (const_reverse_iterator(ss_end()));
 		}
 
 		ss_reverse_iterator_type ss_rend()
-		{	// return iterator for end of reversed mutable sequence
+		{	// return base_class::iterator for end of reversed mutable sequence
 			return (reverse_iterator(ss_begin()));
 		}
 
 		ss_const_reverse_iterator_type ss_rend() const
-		{	// return iterator for end of reversed nonmutable sequence
+		{	// return base_class::iterator for end of reversed nonmutable sequence
 			return (const_reverse_iterator(ss_begin()));
 		}
 
 		msevector(const ss_const_iterator_type &start, const ss_const_iterator_type &end, const _A& _Al = _A())
-			: base_class(static_cast<const_iterator>(start), static_cast<const_iterator>(end), _Al), m_mmitset(*this) {
+			: base_class(static_cast<typename base_class::const_iterator>(start), static_cast<typename base_class::const_iterator>(end), _Al), m_mmitset(*this) {
 			m_debug_size = size();
 		}
 		void assign(const ss_const_iterator_type &start, const ss_const_iterator_type &end) {
 			if (start.m_owner_cptr != end.m_owner_cptr) { throw(std::out_of_range("invalid arguments - void assign(const ss_const_iterator_type &start, const ss_const_iterator_type &end) - msevector")); }
-			const_iterator _F = start;
-			const_iterator _L = end;
+			typename base_class::const_iterator _F = start;
+			typename base_class::const_iterator _L = end;
 			(*this).assign(_F, _L);
 		}
 		void assign_inclusive(const ss_const_iterator_type &first, const ss_const_iterator_type &last) {
 			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void assign_inclusive(const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
 			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void assign_inclusive(const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
-			const_iterator _F = first;
-			const_iterator _L = last;
+			typename base_class::const_iterator _F = first;
+			typename base_class::const_iterator _L = last;
 			_L++;
 			(*this).assign(_F, _L);
 		}
-		ss_iterator_type insert_before(ss_iterator_type &pos, size_type _M, const _Ty& _X) {
+		ss_iterator_type insert_before(const ss_iterator_type &pos, size_t _M, const _Ty& _X) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, _M, _X);
 			ss_iterator_type retval = ss_begin();
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ss_iterator_type insert_before(ss_iterator_type &pos, _Ty&& _X) {
+		ss_iterator_type insert_before(const ss_iterator_type &pos, _Ty&& _X) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, std::move(_X));
 			ss_iterator_type retval = ss_begin();
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ss_iterator_type insert_before(ss_iterator_type &pos, const _Ty& _X = _Ty()) { return (*this).insert(pos, 1, _X); }
-		ss_iterator_type insert_before(ss_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) {
+		ss_iterator_type insert_before(const ss_iterator_type &pos, const _Ty& _X = _Ty()) { return (*this).insert(pos, 1, _X); }
+		ss_iterator_type insert_before(const ss_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			if (start.m_owner_cptr != end.m_owner_cptr) { throw(std::out_of_range("invalid arguments - void insert_before(const ss_const_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
-			const_iterator _F = start;
-			const_iterator _L = end;
+			typename base_class::iterator _P = pos;
+			typename base_class::const_iterator _F = start;
+			typename base_class::const_iterator _L = end;
 			(*this).insert(_P, _F, _L);
 			ss_iterator_type retval = ss_begin();
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
-		/* Note that safety cannot be guaranteed when using an insert() function that takes unsafe iterator and/or pointer parameters. */
-		ss_iterator_type insert_before(ss_iterator_type &pos, const _Ty* start, const _Ty* &end) {
+		/* Note that safety cannot be guaranteed when using an insert() function that takes unsafe typename base_class::iterator and/or pointer parameters. */
+		ss_iterator_type insert_before(const ss_iterator_type &pos, const _Ty* start, const _Ty* &end) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, start, end);
 			ss_iterator_type retval = ss_begin();
 			retval.advance((CInt)original_pos);
 			return retval;
 		}
-		ss_iterator_type insert_before_inclusive(ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) {
+		ss_iterator_type insert_before_inclusive(const ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
-			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void insert_before_inclusive(ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
-			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void insert_before_inclusive(ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
+			if (first.m_owner_cref != last.m_owner_cref) { throw(std::out_of_range("invalid arguments - void insert_before_inclusive(const ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
+			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void insert_before_inclusive(const ss_iterator_type &pos, const ss_const_iterator_type &first, const ss_const_iterator_type &last) - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
-			const_iterator _F = first;
-			const_iterator _L = last;
+			typename base_class::iterator _P = pos;
+			typename base_class::const_iterator _F = first;
+			typename base_class::const_iterator _L = last;
 			_L++;
 			(*this).insert(_P, _F, _L);
 			ss_iterator_type retval = ss_begin();
@@ -1975,10 +2121,10 @@ namespace mse {
 			return retval;
 		}
 #ifndef MSVC2010_COMPATIBILE
-		ss_iterator_type insert_before(ss_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) {	// insert initializer_list
+		ss_iterator_type insert_before(const ss_iterator_type &pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void insert_before() - msevector")); }
 			CSize_t original_pos = pos.position();
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			(*this).insert(_P, _Ilist);
 			ss_iterator_type retval = ss_begin();
 			retval.advance((CInt)original_pos);
@@ -1986,46 +2132,46 @@ namespace mse {
 		}
 #endif /*MSVC2010_COMPATIBILE*/
 		/* These insert() functions are just aliases for their corresponding insert_before() functions. */
-		ss_iterator_type insert(ss_iterator_type &pos, size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
-		ss_iterator_type insert(ss_iterator_type &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
-		ss_iterator_type insert(ss_iterator_type &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
-		ss_iterator_type insert(ss_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) { return insert_before(pos, start, end); }
-		/* Note that safety cannot be guaranteed when using an insert() function that takes unsafe iterator and/or pointer parameters. */
-		ss_iterator_type insert(ss_iterator_type &pos, const _Ty* start, const _Ty* &end) { return insert_before(pos, start, end); }
+		ss_iterator_type insert(const ss_iterator_type &pos, size_t _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
+		ss_iterator_type insert(const ss_iterator_type &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
+		ss_iterator_type insert(const ss_iterator_type &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
+		ss_iterator_type insert(const ss_iterator_type &pos, const ss_const_iterator_type &start, const ss_const_iterator_type &end) { return insert_before(pos, start, end); }
+		/* Note that safety cannot be guaranteed when using an insert() function that takes unsafe typename base_class::iterator and/or pointer parameters. */
+		ss_iterator_type insert(const ss_iterator_type &pos, const _Ty* start, const _Ty* &end) { return insert_before(pos, start, end); }
 #ifndef MSVC2010_COMPATIBILE
-		ss_iterator_type insert(ss_iterator_type &pos, _XSTD initializer_list<value_type> _Ilist) { return insert_before(pos, _Ilist); }
+		ss_iterator_type insert(const ss_iterator_type &pos, _XSTD initializer_list<typename base_class::value_type> _Ilist) { return insert_before(pos, _Ilist); }
 #endif /*MSVC2010_COMPATIBILE*/
-		ss_iterator_type erase(ss_iterator_type &pos) {
+		ss_iterator_type erase(const ss_iterator_type &pos) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			auto retval = pos;
-			static_cast<iterator&>(retval) = (*this).erase(_P);
+			static_cast<typename base_class::iterator&>(retval) = (*this).erase(_P);
 			return retval;
 		}
-		ss_iterator_type erase(ss_iterator_type &start, ss_iterator_type &end) {
+		ss_iterator_type erase(const ss_iterator_type &start, const ss_iterator_type &end) {
 			if (start.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
 			if (end.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase() - msevector")); }
-			iterator _F = start;
-			iterator _L = end;
+			typename base_class::iterator _F = start;
+			typename base_class::iterator _L = end;
 			auto retval = start;
-			static_cast<iterator&>(retval) = (*this).erase(_F, _L);
+			static_cast<typename base_class::iterator&>(retval) = (*this).erase(_F, _L);
 			return retval;
 		}
-		ss_iterator_type erase_inclusive(ss_iterator_type &first, ss_iterator_type &last) {
+		ss_iterator_type erase_inclusive(const ss_iterator_type &first, const ss_iterator_type &last) {
 			if (first.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase_inclusive() - msevector")); }
 			if (last.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase_inclusive() - msevector")); }
 			if (!(last.points_to_item())) { throw(std::out_of_range("invalid argument - void erase_inclusive() - msevector")); }
-			iterator _F = first;
-			iterator _L = last;
+			typename base_class::iterator _F = first;
+			typename base_class::iterator _L = last;
 			_L++;
 			auto retval = first;
-			static_cast<iterator&>(retval) = (*this).erase(_F, _L);
+			static_cast<typename base_class::iterator&>(retval) = (*this).erase(_F, _L);
 			return retval;
 		}
-		void erase_previous_item(ss_iterator_type &pos) {
+		void erase_previous_item(const ss_iterator_type &pos) {
 			if (pos.m_owner_ptr != this) { throw(std::out_of_range("invalid arguments - void erase_previous_item() - msevector")); }
 			if (!(pos.has_previous())) { throw(std::out_of_range("invalid arguments - void erase_previous_item() - msevector")); }
-			iterator _P = pos;
+			typename base_class::iterator _P = pos;
 			_P--;
 			(*this).erase(_P);
 		}
@@ -2042,7 +2188,7 @@ namespace mse {
 		operator _MV() { return msevector(); }
 
 		explicit ivector(const _A& _Al = _A()) : m_shptr(new _MV(_Al)) {}
-		explicit ivector(typename _MV::size_type _N, const _Ty& _V = _Ty(), const _A& _Al = _A()) : m_shptr(new _MV(_N, _V, _Al)) {}
+		explicit ivector(size_t _N, const _Ty& _V = _Ty(), const _A& _Al = _A()) : m_shptr(new _MV(_N, _V, _Al)) {}
 		ivector(_MV&& _X) : m_shptr(new _MV(std::move(_X))) {}
 		ivector(const _MV& _X) : m_shptr(new _MV(_X)) {}
 		ivector(_Myt&& _X) : m_shptr(new _MV(std::move(_X.msevector()))) {}
@@ -2051,7 +2197,7 @@ namespace mse {
 		ivector(_It _F, _It _L, const _A& _Al = _A()) : m_shptr(new _MV(_F, _L, _Al)) {}
 		template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-			, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+			, class = typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
 #endif /*MSVC2010_COMPATIBILE*/
 		>
 		ivector(_Iter _First, _Iter _Last) : m_shptr(new _MV(_First, _Last)) {}
@@ -2060,18 +2206,18 @@ namespace mse {
 		_Myt& operator=(const _MV& _X) { m_shptr->operator=(_X); return (*this); }
 		_Myt& operator=(_Myt&& _X) { m_shptr->operator=(std::move(_X.msevector())); return (*this); }
 		_Myt& operator=(const _Myt& _X) { m_shptr->operator=(_X.msevector()); return (*this); }
-		void reserve(typename _MV::size_type _Count) { m_shptr->reserve(_Count); }
-		void resize(typename _MV::size_type _N, const _Ty& _X = _Ty()) { m_shptr->resize(_N, _X); }
-		typename _MV::const_reference operator[](typename _MV::size_type _P) const { return m_shptr->operator[](_P); }
-		typename _MV::reference operator[](typename _MV::size_type _P) { return m_shptr->operator[](_P); }
+		void reserve(size_t _Count) { m_shptr->reserve(_Count); }
+		void resize(size_t _N, const _Ty& _X = _Ty()) { m_shptr->resize(_N, _X); }
+		typename _MV::const_reference operator[](size_t _P) const { return m_shptr->operator[](_P); }
+		typename _MV::reference operator[](size_t _P) { return m_shptr->operator[](_P); }
 		void push_back(_Ty&& _X) { m_shptr->push_back(std::move(_X)); }
 		void push_back(const _Ty& _X) { m_shptr->push_back(_X); }
 		void pop_back() { m_shptr->pop_back(); }
 		void assign(_It _F, _It _L) { m_shptr->assign(_F, _L); }
-		void assign(typename _MV::size_type _N, const _Ty& _X = _Ty()) { m_shptr->assign(_N, _X); }
+		void assign(size_t _N, const _Ty& _X = _Ty()) { m_shptr->assign(_N, _X); }
 		typename _MV::iterator insert(typename _MV::iterator _P, _Ty&& _X) { return m_shptr->insert(_P, std::move(_X)); }
 		typename _MV::iterator insert(typename _MV::iterator _P, const _Ty& _X = _Ty()) { return m_shptr->insert(_P, _X); }
-		typename _MV::iterator insert(typename _MV::iterator _P, typename _MV::size_type _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
+		typename _MV::iterator insert(typename _MV::iterator _P, size_t _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
 		template<class _Iter>
 		typename std::enable_if<_mse_Is_iterator<_Iter>::value, typename _MV::iterator>::type
 			insert(typename _MV::const_iterator _Where, _Iter _First, _Iter _Last) { return m_shptr->insert(_Where, _First, _Last); }
@@ -2110,20 +2256,20 @@ namespace mse {
 		void swap(_Myt& _X) { m_shptr->swap(_X.msevector()); }
 
 #ifndef MSVC2010_COMPATIBILE
-		ivector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const typename _MV::_Alloc& _Al = _MV::allocator_type()) : m_shptr(new _MV(_Ilist, _Al)) {}
+		ivector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const _A& _Al = _A()) : m_shptr(new _MV(_Ilist, _Al)) {}
 		_Myt& operator=(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->operator=(_Ilist); return (*this); }
 		void assign(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->assign(_Ilist); }
 		typename _MV::iterator insert(typename _MV::const_iterator _Where, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return m_shptr->insert(_Where, _Ilist); }
 #endif /*MSVC2010_COMPATIBILE*/
 
-		typename _MV::size_type capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
-		void shrink_to_fit() { m_shtr->shrink_to_fit(); }
-		typename _MV::size_type size() const _NOEXCEPT{ return m_shptr->size(); }
-		typename _MV::size_type max_size() const _NOEXCEPT{ return m_shptr->max_size(); }
+		size_t capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
+		void shrink_to_fit() { m_shptr->shrink_to_fit(); }
+		size_t size() const _NOEXCEPT{ return m_shptr->size(); }
+		size_t max_size() const _NOEXCEPT{ return m_shptr->max_size(); }
 		bool empty() const _NOEXCEPT{ return m_shptr->empty(); }
-		typename _MV::_Alloc get_allocator() const _NOEXCEPT{ return m_shptr->get_allocator(); }
-		typename _MV::const_reference at(typename _MV::size_type _Pos) const { return m_shptr->at(_Pos); }
-		typename _MV::reference at(typename _MV::size_type _Pos) { return m_shptr->at(_Pos); }
+		_A get_allocator() const _NOEXCEPT{ return m_shptr->get_allocator(); }
+		typename _MV::const_reference at(size_t _Pos) const { return m_shptr->at(_Pos); }
+		typename _MV::reference at(size_t _Pos) { return m_shptr->at(_Pos); }
 		typename _MV::reference front() { return m_shptr->front(); }
 		typename _MV::const_reference front() const { return m_shptr->front(); }
 		typename _MV::reference back() { return m_shptr->back(); }
@@ -2138,8 +2284,8 @@ namespace mse {
 			typedef typename _MV::mm_const_iterator_type::pointer pointer;
 			typedef typename _MV::mm_const_iterator_type::reference reference;
 
-			cipointer(const _Myt& owner_cref) : m_msevector_shptr(owner_cref.m_shptr), m_cipointer_shptr(new _MV::cipointer(*(owner_cref.m_shptr))) {}
-			cipointer(const cipointer& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_cipointer_shptr(new _MV::cipointer(*(src_cref.m_cipointer_shptr))) {
+			cipointer(const _Myt& owner_cref) : m_msevector_shptr(owner_cref.m_shptr), m_cipointer_shptr(new typename _MV::cipointer(*(owner_cref.m_shptr))) {}
+			cipointer(const cipointer& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_cipointer_shptr(new typename _MV::cipointer(*(src_cref.m_cipointer_shptr))) {
 				(*this) = src_cref;
 			}
 			~cipointer() {}
@@ -2185,11 +2331,11 @@ namespace mse {
 			void set_to_const_item_pointer(const cipointer& _Right_cref) { msevector_cipointer().set_to_const_item_pointer(_Right_cref.msevector_cipointer()); }
 			CSize_t position() const { return msevector_cipointer().position(); }
 		private:
-			cipointer(const std::shared_ptr<_MV>& msevector_shptr) : m_msevector_shptr(msevector_shptr), m_cipointer_shptr(new _MV::cipointer(*(msevector_shptr))) {}
+			cipointer(const std::shared_ptr<_MV>& msevector_shptr) : m_msevector_shptr(msevector_shptr), m_cipointer_shptr(new typename _MV::cipointer(*(msevector_shptr))) {}
 			std::shared_ptr<_MV> m_msevector_shptr;
 			/* m_cipointer_shptr needs to be declared after m_msevector_shptr so that it's destructor will be called first. */
 			std::shared_ptr<typename _MV::cipointer> m_cipointer_shptr;
-			friend class _Myt;
+			friend class /*_Myt*/ivector<_Ty, _A>;
 			friend class ipointer;
 		};
 		class ipointer {
@@ -2201,8 +2347,8 @@ namespace mse {
 			typedef typename _MV::mm_iterator_type::pointer pointer;
 			typedef typename _MV::mm_iterator_type::reference reference;
 
-			ipointer(_Myt& owner_ref) : m_msevector_shptr(owner_ref.m_shptr), m_ipointer_shptr(new _MV::ipointer(*(owner_ref.m_shptr))) {}
-			ipointer(const ipointer& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ipointer_shptr(new _MV::ipointer(*(src_cref.m_ipointer_shptr))) {
+			ipointer(_Myt& owner_ref) : m_msevector_shptr(owner_ref.m_shptr), m_ipointer_shptr(new typename _MV::ipointer(*(owner_ref.m_shptr))) {}
+			ipointer(const ipointer& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ipointer_shptr(new typename _MV::ipointer(*(src_cref.m_ipointer_shptr))) {
 				(*this) = src_cref;
 			}
 			~ipointer() {}
@@ -2211,8 +2357,8 @@ namespace mse {
 			//const mm_iterator_handle_type& handle() const { return (*m_handle_shptr); }
 			operator cipointer() const {
 				cipointer retval(m_msevector_shptr);
-				retval.const_item_pointer().set_to_beginning();
-				retval.const_item_pointer().advance(mse::CInt(msevector_ipointer().position()));
+				retval.set_to_beginning();
+				retval.advance(mse::CInt(msevector_ipointer().position()));
 				return retval;
 			}
 
@@ -2258,7 +2404,7 @@ namespace mse {
 			std::shared_ptr<_MV> m_msevector_shptr;
 			/* m_ipointer_shptr needs to be declared after m_msevector_shptr so that it's destructor will be called first. */
 			std::shared_ptr<typename _MV::ipointer> m_ipointer_shptr;
-			friend class _Myt;
+			friend class /*_Myt*/ivector<_Ty, _A>;
 		};
 
 		/* begin() and end() are provided so that ivector can be used with stl algorithms. When using ipointers directly,
@@ -2302,58 +2448,58 @@ namespace mse {
 		void assign_inclusive(const cipointer &first, const cipointer &last) {
 			m_shptr->assign_inclusive(first.msevector_cipointer(), last.msevector_cipointer());
 		}
-		ipointer insert_before(ipointer &pos, typename _MV::size_type _M, const _Ty& _X) {
+		ipointer insert_before(const ipointer &pos, size_t _M, const _Ty& _X) {
 			auto res = m_shptr->insert_before(pos.msevector_ipointer(), _M, _X);
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
-		ipointer insert_before(ipointer &pos, _Ty&& _X) {
+		ipointer insert_before(const ipointer &pos, _Ty&& _X) {
 			auto res = m_shptr->insert_before(pos.msevector_ipointer(), std::move(_X));
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
-		ipointer insert_before(ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
-		ipointer insert_before(ipointer &pos, const cipointer &start, const cipointer &end) {
+		ipointer insert_before(const ipointer &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
+		ipointer insert_before(const ipointer &pos, const cipointer &start, const cipointer &end) {
 			auto res = m_shptr->insert_before(pos.msevector_ipointer(), start.msevector_cipointer(), end.msevector_cipointer());
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
-		ipointer insert_before_inclusive(ipointer &pos, const cipointer &first, const cipointer &last) {
+		ipointer insert_before_inclusive(const ipointer &pos, const cipointer &first, const cipointer &last) {
 			auto end = last; end.set_to_next();
 			return insert_before_inclusive(pos, first, end);
 		}
 #ifndef MSVC2010_COMPATIBILE
-		ipointer insert_before(ipointer &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
+		ipointer insert_before(const ipointer &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 			auto res = m_shptr->insert_before(pos.msevector_ipointer(), _Ilist);
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
 #endif /*MSVC2010_COMPATIBILE*/
 		void insert_before(CSize_t pos, _Ty&& _X) {
-			m_shptr->insert_before(_P, std::move(_X));
+			m_shptr->insert_before(pos, std::move(_X));
 		}
 		void insert_before(CSize_t pos, const _Ty& _X = _Ty()) {
-			m_shptr->insert_before(_P, _X);
+			m_shptr->insert_before(pos, _X);
 		}
-		void insert_before(CSize_t pos, typename _MV::size_type _M, const _Ty& _X) {
-			m_shptr->insert_before(_P, _M, _X);
+		void insert_before(CSize_t pos, size_t _M, const _Ty& _X) {
+			m_shptr->insert_before(pos, _M, _X);
 		}
 #ifndef MSVC2010_COMPATIBILE
 		void insert_before(CSize_t pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
-			m_shptr->insert_before(_P, _Ilist);
+			m_shptr->insert_before(pos, _Ilist);
 		}
 #endif /*MSVC2010_COMPATIBILE*/
-		ipointer erase(ipointer &pos) {
+		ipointer erase(const ipointer &pos) {
 			auto res = m_shptr->erase(pos.msevector_ipointer());
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
-		ipointer erase(ipointer &start, ipointer &end) {
+		ipointer erase(const ipointer &start, const ipointer &end) {
 			auto res = m_shptr->erase(start.msevector_ipointer(), end.msevector_ipointer());
 			ipointer retval(*this); retval.msevector_ipointer() = res;
 			return retval;
 		}
-		ipointer erase_inclusive(ipointer &first, ipointer &last) {
+		ipointer erase_inclusive(const ipointer &first, const ipointer &last) {
 			auto end = last; end.set_to_next();
 			return erase_inclusive(first, end);
 		}
@@ -2401,7 +2547,7 @@ namespace mse {
 			operator _MV() { return msevector(); }
 
 			explicit vector(const _A& _Al = _A()) : m_shptr(new _MV(_Al)) {}
-			explicit vector(typename _MV::size_type _N, const _Ty& _V = _Ty(), const _A& _Al = _A()) : m_shptr(new _MV(_N, _V, _Al)) {}
+			explicit vector(size_t _N, const _Ty& _V = _Ty(), const _A& _Al = _A()) : m_shptr(new _MV(_N, _V, _Al)) {}
 			vector(_MV&& _X) : m_shptr(new _MV(std::move(_X))) {}
 			vector(const _MV& _X) : m_shptr(new _MV(_X)) {}
 			vector(_Myt&& _X) : m_shptr(new _MV(std::move(_X.msevector()))) {}
@@ -2411,33 +2557,33 @@ namespace mse {
 			vector(const _Ty* _F, const _Ty* _L, const _A& _Al = _A()) : m_shptr(new _MV(_F, _L, _Al)) {}
 			template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-				, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+				, class = typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
 #endif /*MSVC2010_COMPATIBILE*/
 			>
 			vector(_Iter _First, _Iter _Last) : m_shptr(new _MV(_First, _Last)) {}
 			template<class _Iter
 #ifndef MSVC2010_COMPATIBILE
-				, class = typename enable_if<_mse_Is_iterator<_Iter>::value, void>::type
+				, class = typename std::enable_if<_mse_Is_iterator<_Iter>::value, void>::type
 #endif /*MSVC2010_COMPATIBILE*/
 			>
-			vector(_Iter _First, _Iter _Last, const typename _MV::_Alloc& _Al) : base_class(_First, _Last, _Al) { m_debug_size = size(); }
+			vector(_Iter _First, _Iter _Last, const _A& _Al) : m_shptr(new _MV(_First, _Last, _Al)) {}
 
 			_Myt& operator=(_MV&& _X) { m_shptr->operator=(std::move(_X)); return (*this); }
 			_Myt& operator=(const _MV& _X) { m_shptr->operator=(_X); return (*this); }
 			_Myt& operator=(_Myt&& _X) { m_shptr->operator=(std::move(_X.msevector())); return (*this); }
 			_Myt& operator=(const _Myt& _X) { m_shptr->operator=(_X.msevector()); return (*this); }
-			void reserve(typename _MV::size_type _Count) { m_shptr->reserve(_Count); }
-			void resize(typename _MV::size_type _N, const _Ty& _X = _Ty()) { m_shptr->resize(_N, _X); }
-			typename _MV::const_reference operator[](typename _MV::size_type _P) const { return m_shptr->operator[](_P); }
-			typename _MV::reference operator[](typename _MV::size_type _P) { return m_shptr->operator[](_P); }
+			void reserve(size_t _Count) { m_shptr->reserve(_Count); }
+			void resize(size_t _N, const _Ty& _X = _Ty()) { m_shptr->resize(_N, _X); }
+			typename _MV::const_reference operator[](size_t _P) const { return m_shptr->operator[](_P); }
+			typename _MV::reference operator[](size_t _P) { return m_shptr->operator[](_P); }
 			void push_back(_Ty&& _X) { m_shptr->push_back(std::move(_X)); }
 			void push_back(const _Ty& _X) { m_shptr->push_back(_X); }
 			void pop_back() { m_shptr->pop_back(); }
 			void assign(_It _F, _It _L) { m_shptr->assign(_F, _L); }
-			void assign(typename _MV::size_type _N, const _Ty& _X = _Ty()) { m_shptr->assign(_N, _X); }
+			void assign(size_t _N, const _Ty& _X = _Ty()) { m_shptr->assign(_N, _X); }
 			typename _MV::iterator insert(typename _MV::iterator _P, _Ty&& _X) { return m_shptr->insert(_P, std::move(_X)); }
 			typename _MV::iterator insert(typename _MV::iterator _P, const _Ty& _X = _Ty()) { return m_shptr->insert(_P, _X); }
-			typename _MV::iterator insert(typename _MV::iterator _P, typename _MV::size_type _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
+			typename _MV::iterator insert(typename _MV::iterator _P, size_t _M, const _Ty& _X) { return m_shptr->insert(_P, _M, _X); }
 			template<class _Iter>
 			typename std::enable_if<_mse_Is_iterator<_Iter>::value, typename _MV::iterator>::type
 				insert(typename _MV::const_iterator _Where, _Iter _First, _Iter _Last) { return m_shptr->insert(_Where, _First, _Last); }
@@ -2476,20 +2622,20 @@ namespace mse {
 			void swap(_Myt& _X) { m_shptr->swap(_X.msevector()); }
 
 #ifndef MSVC2010_COMPATIBILE
-			vector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const typename _MV::_Alloc& _Al = _MV::allocator_type()) : m_shptr(new _MV(_Ilist, _Al)) {}
+			vector(_XSTD initializer_list<typename _MV::value_type> _Ilist, const _A& _Al = _A()) : m_shptr(new _MV(_Ilist, _Al)) {}
 			_Myt& operator=(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->operator=(_Ilist); return (*this); }
 			void assign(_XSTD initializer_list<typename _MV::value_type> _Ilist) { m_shptr->assign(_Ilist); }
 			typename _MV::iterator insert(typename _MV::const_iterator _Where, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return m_shptr->insert(_Where, _Ilist); }
 #endif /*MSVC2010_COMPATIBILE*/
 
-			typename _MV::size_type capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
-			void shrink_to_fit() { m_shtr->shrink_to_fit(); }
-			typename _MV::size_type size() const _NOEXCEPT{ return m_shptr->size(); }
-			typename _MV::size_type max_size() const _NOEXCEPT{ return m_shptr->max_size(); }
+			size_t capacity() const _NOEXCEPT{ return m_shptr->capacity(); }
+			void shrink_to_fit() { m_shptr->shrink_to_fit(); }
+			size_t size() const _NOEXCEPT{ return m_shptr->size(); }
+			size_t max_size() const _NOEXCEPT{ return m_shptr->max_size(); }
 			bool empty() const _NOEXCEPT{ return m_shptr->empty(); }
-			typename _MV::_Alloc get_allocator() const _NOEXCEPT{ return m_shptr->get_allocator(); }
-			typename _MV::const_reference at(typename _MV::size_type _Pos) const { return m_shptr->at(_Pos); }
-			typename _MV::reference at(typename _MV::size_type _Pos) { return m_shptr->at(_Pos); }
+			_A get_allocator() const _NOEXCEPT{ return m_shptr->get_allocator(); }
+			typename _MV::const_reference at(size_t _Pos) const { return m_shptr->at(_Pos); }
+			typename _MV::reference at(size_t _Pos) { return m_shptr->at(_Pos); }
 			typename _MV::reference front() { return m_shptr->front(); }
 			typename _MV::const_reference front() const { return m_shptr->front(); }
 			typename _MV::reference back() { return m_shptr->back(); }
@@ -2505,8 +2651,8 @@ namespace mse {
 				typedef typename _MV::ss_const_iterator_type::pointer pointer;
 				typedef typename _MV::ss_const_iterator_type::reference reference;
 
-				const_iterator() : /*m_msevector_shptr(owner_cref.m_shptr), */m_ss_const_iterator_shptr(new _MV::ss_const_iterator_type()) {}
-				const_iterator(const const_iterator& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ss_const_iterator_shptr(new _MV::ss_const_iterator_type()) {
+				const_iterator() : /*m_msevector_shptr(owner_cref.m_shptr), */m_ss_const_iterator_shptr(new typename _MV::ss_const_iterator_type()) {}
+				const_iterator(const const_iterator& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ss_const_iterator_shptr(new typename _MV::ss_const_iterator_type()) {
 					(*this) = src_cref;
 				}
 				~const_iterator() {}
@@ -2552,13 +2698,13 @@ namespace mse {
 				void set_to_const_item_pointer(const const_iterator& _Right_cref) { msevector_ss_const_iterator_type().set_to_const_item_pointer(_Right_cref.msevector_ss_const_iterator_type()); }
 				CSize_t position() const { return msevector_ss_const_iterator_type().position(); }
 			private:
-				const_iterator(std::shared_ptr<_MV> msevector_shptr) : m_msevector_shptr(msevector_shptr), m_ss_const_iterator_shptr(new _MV::ss_const_iterator_type()) {
+				const_iterator(std::shared_ptr<_MV> msevector_shptr) : m_msevector_shptr(msevector_shptr), m_ss_const_iterator_shptr(new typename _MV::ss_const_iterator_type()) {
 					(*m_ss_const_iterator_shptr) = msevector_shptr->ss_cbegin();
 				}
 				std::shared_ptr<_MV> m_msevector_shptr;
 				/* m_ss_const_iterator_shptr needs to be declared after m_msevector_shptr so that it's destructor will be called first. */
 				std::shared_ptr<typename _MV::ss_const_iterator_type> m_ss_const_iterator_shptr;
-				friend class _Myt;
+				friend class /*_Myt*/vector<_Ty, _A>;
 				friend class iterator;
 			};
 			class iterator {
@@ -2570,8 +2716,8 @@ namespace mse {
 				typedef typename _MV::ss_iterator_type::pointer pointer;
 				typedef typename _MV::ss_iterator_type::reference reference;
 
-				iterator() : /*m_msevector_shptr(owner_ref.m_shptr), */m_ss_iterator_shptr(new _MV::ss_iterator_type()) {}
-				iterator(const iterator& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ss_iterator_shptr(new _MV::ss_iterator_type()) {
+				iterator() : /*m_msevector_shptr(owner_ref.m_shptr), */m_ss_iterator_shptr(new typename _MV::ss_iterator_type()) {}
+				iterator(const iterator& src_cref) : m_msevector_shptr(src_cref.m_msevector_shptr), m_ss_iterator_shptr(new typename _MV::ss_iterator_type()) {
 					(*this) = src_cref;
 				}
 				~iterator() {}
@@ -2627,7 +2773,7 @@ namespace mse {
 				std::shared_ptr<_MV> m_msevector_shptr;
 				/* m_ss_iterator_shptr needs to be declared after m_msevector_shptr so that it's destructor will be called first. */
 				std::shared_ptr<typename _MV::ss_iterator_type> m_ss_iterator_shptr;
-				friend class _Myt;
+				friend class /*_Myt*/vector<_Ty, _A>;
 			};
 
 			iterator begin()
@@ -2674,69 +2820,69 @@ namespace mse {
 			void assign_inclusive(const const_iterator &first, const const_iterator &last) {
 				m_shptr->assign_inclusive(first.msevector_ss_const_iterator_type(), last.msevector_ss_const_iterator_type());
 			}
-			iterator insert_before(iterator &pos, typename _MV::size_type _M, const _Ty& _X) {
+			iterator insert_before(const iterator &pos, size_t _M, const _Ty& _X) {
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), _M, _X);
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator insert_before(iterator &pos, _Ty&& _X) {
+			iterator insert_before(const iterator &pos, _Ty&& _X) {
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), std::move(_X));
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator insert_before(iterator &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
-			iterator insert_before(iterator &pos, const const_iterator &start, const const_iterator &end) {
+			iterator insert_before(const iterator &pos, const _Ty& _X = _Ty()) { return insert_before(pos, 1, _X); }
+			iterator insert_before(const iterator &pos, const const_iterator &start, const const_iterator &end) {
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), start.msevector_ss_const_iterator_type(), end.msevector_ss_const_iterator_type());
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator insert_before(iterator &pos, const _Ty* start, const _Ty* end) {
+			iterator insert_before(const iterator &pos, const _Ty* start, const _Ty* end) {
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), start, end);
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator insert_before_inclusive(iterator &pos, const const_iterator &first, const const_iterator &last) {
+			iterator insert_before_inclusive(const iterator &pos, const const_iterator &first, const const_iterator &last) {
 				auto end = last; end.set_to_next();
 				return insert_before_inclusive(pos, first, end);
 			}
 #ifndef MSVC2010_COMPATIBILE
-			iterator insert_before(iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
+			iterator insert_before(const iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
 				auto res = m_shptr->insert_before(pos.msevector_ss_iterator_type(), _Ilist);
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
 #endif /*MSVC2010_COMPATIBILE*/
 			void insert_before(CSize_t pos, const _Ty& _X = _Ty()) {
-				m_shptr->insert_before(_P, _X);
+				m_shptr->insert_before(pos, _X);
 			}
-			void insert_before(CSize_t pos, typename _MV::size_type _M, const _Ty& _X) {
-				m_shptr->insert_before(_P, _M, _X);
+			void insert_before(CSize_t pos, size_t _M, const _Ty& _X) {
+				m_shptr->insert_before(pos, _M, _X);
 			}
 #ifndef MSVC2010_COMPATIBILE
 			void insert_before(CSize_t pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) {	// insert initializer_list
-				m_shptr->insert_before(_P, _Ilist);
+				m_shptr->insert_before(pos, _Ilist);
 			}
 #endif /*MSVC2010_COMPATIBILE*/
 			/* These insert() functions are just aliases for their corresponding insert_before() functions. */
-			iterator insert(iterator &pos, typename _MV::size_type _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
-			iterator insert(iterator &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
-			iterator insert(iterator &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
-			iterator insert(iterator &pos, const const_iterator &start, const const_iterator &end) { return insert_before(pos, start, end); }
-			iterator insert(iterator &pos, const _Ty* start, const _Ty* end) { return insert_before(pos, start, end); }
+			iterator insert(const iterator &pos, size_t _M, const _Ty& _X) { return insert_before(pos, _M, _X); }
+			iterator insert(const iterator &pos, _Ty&& _X) { return insert_before(pos, std::move(_X)); }
+			iterator insert(const iterator &pos, const _Ty& _X = _Ty()) { return insert_before(pos, _X); }
+			iterator insert(const iterator &pos, const const_iterator &start, const const_iterator &end) { return insert_before(pos, start, end); }
+			iterator insert(const iterator &pos, const _Ty* start, const _Ty* end) { return insert_before(pos, start, end); }
 #ifndef MSVC2010_COMPATIBILE
-			iterator insert(iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return insert_before(pos, _Ilist); }
+			iterator insert(const iterator &pos, _XSTD initializer_list<typename _MV::value_type> _Ilist) { return insert_before(pos, _Ilist); }
 #endif /*MSVC2010_COMPATIBILE*/
-			iterator erase(iterator &pos) {
+			iterator erase(const iterator &pos) {
 				auto res = m_shptr->erase(pos.msevector_ss_iterator_type());
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator erase(iterator &start, iterator &end) {
+			iterator erase(const iterator &start, const iterator &end) {
 				auto res = m_shptr->erase(start.msevector_ss_iterator_type(), end.msevector_ss_iterator_type());
 				iterator retval = begin(); retval.msevector_ss_iterator_type() = res;
 				return retval;
 			}
-			iterator erase_inclusive(iterator &first, iterator &last) {
+			iterator erase_inclusive(const iterator &first, const iterator &last) {
 				auto end = last; end.set_to_next();
 				return erase_inclusive(first, end);
 			}
