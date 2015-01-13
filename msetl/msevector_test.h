@@ -504,12 +504,12 @@ namespace mse {
 			v1[0].y = 2;
 
 #ifndef MSVC2010_COMPATIBILE
-#if !(defined(__GNUC__) || defined(__GNUG__))
+#if !(defined(GPP_COMPATIBILE))
 			EXAM_CHECK(std::is_trivially_copyable<Point>::value == true);
 			EXAM_CHECK(std::is_trivially_copyable<msevector<Point>::const_iterator>::value == true);
 			EXAM_CHECK(std::is_trivially_copyable<PointEx>::value == true);
 			EXAM_CHECK(std::is_trivially_copyable<msevector<PointEx>::const_iterator>::value == true);
-#endif /*!(defined(__GNUC__) || defined(__GNUG__))*/
+#endif /*!(GPP_COMPATIBILE)*/
 #endif /*MSVC2010_COMPATIBILE*/
 
 			//msevector<PointEx> v2(v1.begin(), v1.end()); // non-trivial 

@@ -12,7 +12,18 @@
 #include <limits>       // std::numeric_limits
 #include <stdexcept>      // std::out_of_range
 
-//define MSVC2010_COMPATIBILE
+/*compiler specific defines*/
+#ifdef _MSC_VER
+#if (1700 > _MSC_VER)
+#define MSVC2010_COMPATIBILE 1
+#endif /*(1700 > _MSC_VER)*/
+#else /*_MSC_VER*/
+#if (defined(__GNUC__) || defined(__GNUG__))
+#define GPP_COMPATIBILE 1
+#define GPP4P8_COMPATIBILE 1
+#endif
+#endif /*_MSC_VER*/
+
 
 namespace mse {
 	/* When the mse primitive replacements are "disabled" they lose their default initialization and may cause problems for

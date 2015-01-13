@@ -100,12 +100,12 @@ namespace mse {
 		}
 	};
 
-#ifndef MSVC2010_COMPATIBILE
 	template<class _Iter>
 	struct _mse_Is_iterator
 	: public integral_constant<bool, !std::is_integral<_Iter>::value>
 	{	// tests for reasonable iterator candidate
 	};
+#ifndef MSVC2010_COMPATIBILE
 	template<typename _InIter>
 	using _mse_RequireInputIter = typename
 	  std::enable_if<std::is_convertible<typename
@@ -324,7 +324,7 @@ namespace mse {
 			return retval;
 		}
 
-#if !(defined(__GNUC__) || defined(__GNUG__))
+#if !(defined(GPP4P8_COMPATIBILE))
 #ifndef MSVC2010_COMPATIBILE
 		typename base_class::iterator
 #else /*MSVC2010_COMPATIBILE*/
@@ -396,11 +396,11 @@ namespace mse {
 #endif /*MSVC2010_COMPATIBILE*/
 			}
 
-#else /*!(defined(__GNUC__) || defined(__GNUG__))*/
+#else /*!(defined(GPP4P8_COMPATIBILE))*/
 
 		/*typename base_class::iterator*/
 		void
-			/* g++4.8 seems to be (incorrectly) using the c++98 version of this insert function instead of the c++11 version. */
+			/* g++4.8 seems to be using the c++98 version of this insert function instead of the c++11 version. */
 			insert(typename base_class::/*const_*/iterator _P, size_t _M, const _Ty& _X) {
 				CInt di = std::distance(base_class::/*c*/begin(), _P);
 				CSize_t d(di);
@@ -450,7 +450,7 @@ namespace mse {
 				}
 				/*return retval;*/
 			}
-#endif /*!(defined(__GNUC__) || defined(__GNUG__))*/
+#endif /*!(defined(GPP4P8_COMPATIBILE))*/
 
 		template<class
 #ifndef MSVC2010_COMPATIBILE
@@ -486,7 +486,7 @@ namespace mse {
 			...
 #endif /*MSVC2010_COMPATIBILE*/
 			_Valty>
-#if !(defined(__GNUC__) || defined(__GNUG__))
+#if !(defined(GPP4P8_COMPATIBILE))
 		typename base_class::iterator emplace(typename base_class::const_iterator _Where, _Valty&&
 #ifndef MSVC2010_COMPATIBILE
 		...
@@ -494,11 +494,11 @@ namespace mse {
 		_Val)
 		{	// insert by moving _Val at _Where
 			CInt di = std::distance(base_class::cbegin(), _Where);
-#else /*!(defined(__GNUC__) || defined(__GNUG__))*/
+#else /*!(defined(GPP4P8_COMPATIBILE))*/
 		typename base_class::iterator emplace(typename base_class::/*const_*/iterator _Where, _Valty&& ..._Val)
 		{	// insert by moving _Val at _Where
 			CInt di = std::distance(base_class::/*c*/begin(), _Where);
-#endif /*!(defined(__GNUC__) || defined(__GNUG__))*/
+#endif /*!(defined(GPP4P8_COMPATIBILE))*/
 			CSize_t d(di);
 			if ((0 > di) || (CSize_t((*this).size()) < di)) { throw(std::out_of_range("index out of range - typename base_class::iterator emplace() - msevector")); }
 
@@ -609,7 +609,7 @@ namespace mse {
 			m_debug_size = size();
 			m_mmitset.reset();
 		}
-#if defined(__GNUC__) || defined(__GNUG__)
+#if defined(GPP4P8_COMPATIBILE)
 		/* g++4.8 seems to be (incorrectly) using the c++98 version of this insert function instead of the c++11 version. */
 		/*typename base_class::iterator*/void insert(typename base_class::/*const_*/iterator _Where, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
 			CInt di = std::distance(base_class::/*c*/begin(), _Where);
@@ -633,7 +633,7 @@ namespace mse {
 			}
 			/*return retval;*/
 		}
-#else /*defined(__GNUC__) || defined(__GNUG__)*/
+#else /*defined(GPP4P8_COMPATIBILE)*/
 		typename base_class::iterator insert(typename base_class::const_iterator _Where, _XSTD initializer_list<typename base_class::value_type> _Ilist) {	// insert initializer_list
 			CInt di = std::distance(base_class::cbegin(), _Where);
 			CSize_t d(di);
@@ -656,7 +656,7 @@ namespace mse {
 			}
 			return retval;
 		}
-#endif /*defined(__GNUC__) || defined(__GNUG__)*/
+#endif /*defined(GPP4P8_COMPATIBILE)*/
 #endif /*MSVC2010_COMPATIBILE*/
 
 		size_t m_debug_size;
