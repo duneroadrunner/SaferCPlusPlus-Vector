@@ -136,10 +136,10 @@ int main(int argc, char* argv[])
 		/* size_t szt2 = mse_szt1; */ /* This wouldn't compile. */
 #ifdef MSVC2010_COMPATIBILE
 		size_t szt1 = mse::as_a_size_t(mse_szt1); /* We exclude automatic conversion from mse::CSize_t to size_t because we
-													 consider size_t an intrinsicly error prone type. */
+													 consider size_t an intrinsically error prone type. */
 #else /*MSVC2010_COMPATIBILE*/
 		size_t szt1 = static_cast<size_t>(mse_szt1); /* We exclude automatic conversion from mse::CSize_t to size_t because we
-													 consider size_t an intrinsicly error prone type. */
+													 consider size_t an intrinsically error prone type. */
 #endif /*MSVC2010_COMPATIBILE*/
 
 		try {

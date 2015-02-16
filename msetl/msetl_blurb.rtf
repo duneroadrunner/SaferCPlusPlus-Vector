@@ -85,7 +85,7 @@ mse::msevector also supports two other iterator types: "mse::msevector::iterator
 \cf0\highlight0\f0\fs22\par
 mse::msevectors are slightly less safe than mse::mstd::vectors in that mse::msevector iterators are not safe with respect to reference of deallocated vectors (i.e. java-style delay of object destruction). In exchange however, mse::msevectors have less overhead and should be a little bit faster. If you're looking to improve safety with very little compromise with respect to compatibility and not too much compromise with respect to performance, mse::msevectors may be the way to go.\par
 \par
-The mestl library provides a third version of the vector class, mse::ivector, which is very safe, like mse::mstd::vector, but only supports the mse::ivector::ipointer "list-style" iterators. mse::ivector is more appropriate for situations where safety is a priority and you feel (as we do) that stl vector iterators are intrinsicly problematic. mse::ivector::ipointers can still be used with stl algorithms (like std::sort).\par
+The mestl library provides a third version of the vector class, mse::ivector, which is very safe, like mse::mstd::vector, but only supports the mse::ivector::ipointer "list-style" iterators. mse::ivector is more appropriate for situations where safety is a priority and you feel (as we do) that stl vector iterators are intrinsically problematic. mse::ivector::ipointers can still be used with stl algorithms (like std::sort).\par
 \par
 Safer c++:\par
 The msetl was created to support a new style/convention of c++ programming that attempts to approach a "java like" level of safety.\par
