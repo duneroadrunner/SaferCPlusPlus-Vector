@@ -345,7 +345,7 @@ namespace mse {
 		explicit CSize_t(short x) { assign_check_range<short>(x); m_val = static_cast<_Ty>(x); }
 		explicit CSize_t(char x) { assign_check_range<char>(x); m_val = static_cast<_Ty>(x); }
 		CSize_t(size_t   x) { assign_check_range<size_t>(x); m_val = static_cast<_Ty>(x); }
-		explicit CSize_t(CInt   x) { assign_check_range<int>(x); m_val = static_cast<_Ty>(x); }
+		/*explicit */CSize_t(CInt   x) { assign_check_range<int>(x); m_val = static_cast<_Ty>(x); }
 		/* We would have liked to have constructors for the unsigned primitive integer types, but one of them could
 		potentially clash with the size_t constructor. */
 		//explicit CSize_t(unsigned long long  x) { assign_check_range<unsigned long long>(x); m_val = static_cast<_Ty>(x); }
