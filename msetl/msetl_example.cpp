@@ -4,7 +4,10 @@
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include "msetl.h"
+//include "msetl.h"
+#include "msemsevector.h"
+#include "msemstdvector.h"
+#include "mseivector.h"
 #include "msevector_test.h"
 #include <iostream>
 

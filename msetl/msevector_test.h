@@ -8,7 +8,10 @@
 #ifndef MSEVECTOR_TEST_H
 #define MSEVECTOR_TEST_H
 
-#include "msetl.h"
+//include "msetl.h"
+#include "msemsevector.h"
+#include "msemstdvector.h"
+#include "mseivector.h"
 #include <algorithm>    // std::sort
 
 namespace mse {
