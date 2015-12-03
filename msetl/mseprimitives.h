@@ -26,6 +26,20 @@
 
 
 namespace mse {
+
+	/* Some older compilers (i.e. msvc2013) do not yet support inherited constructors, so we provide this macro hack as a
+	substitute. So instead of writng "using CBaseClass::CBaseClass;" you can instead write
+	"MSE_USING(CDerivedClass, CBaseClass)" */
+#define MSE_USING(Derived, Base)                                 \
+    template<typename ...Args,                               \
+             typename = typename std::enable_if              \
+             <                                               \
+                std::is_constructible<Base, Args...>::value  \
+			 			 			              >::type>                                        \
+    Derived(Args &&...args)                                  \
+        : Base(std::forward<Args>(args)...) { }              \
+
+
 	/* When the mse primitive replacements are "disabled" they lose their default initialization and may cause problems for
 	code that relies on it. */
 #ifdef MSE_PRIMITIVES_DISABLED
@@ -614,5 +628,101 @@ namespace mse {
 		b4 &= b3;
 	}
 #endif /*MSE_PRIMITIVES_DISABLED*/
+
+	class CSaferPtrBase {
+	public:
+		/* setToNull() needs to be available even when the smart pointer is const, because the object it points to may become
+		invalid (deleted). */
+		virtual void setToNull() const = 0;
+	};
+
+	/* TSaferPtr behaves similar to, and is largely compatible with, native pointers. It's a bit safer in that it initializes to
+	nullptr by default and checks for attempted dereference of null pointers. */
+	template<typename _Ty>
+	class TSaferPtr : public CSaferPtrBase {
+	public:
+		TSaferPtr(_Ty* ptr = nullptr) : m_ptr(ptr) {}
+		TSaferPtr(const TSaferPtr<_Ty>& src) : m_ptr(src.m_ptr) {}
+		virtual ~TSaferPtr() {}
+
+		virtual void setToNull() const { m_ptr = nullptr; }
+
+		void pointer(_Ty* ptr) { m_ptr = ptr; }
+		_Ty* pointer() const { return m_ptr; }
+		_Ty& operator*() const {
+			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TSaferPtr")); }
+			return (*m_ptr);
+		}
+		_Ty* operator->() const {
+			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TSaferPtr")); }
+			return m_ptr;
+		}
+		TSaferPtr<_Ty>& operator=(_Ty* ptr) {
+			m_ptr = ptr;
+			return (*this);
+		}
+		TSaferPtr<_Ty>& operator=(const TSaferPtr<_Ty>& _Right_cref) {
+			m_ptr = _Right_cref.m_ptr;
+			return (*this);
+		}
+		bool operator==(const _Ty* _Right_cref) const { return (_Right_cref == m_ptr); }
+		bool operator!=(const _Ty* _Right_cref) const { return (!((*this) == _Right_cref)); }
+		bool operator==(const TSaferPtr<_Ty> &_Right_cref) const { return (_Right_cref == m_ptr); }
+		bool operator!=(const TSaferPtr<_Ty> &_Right_cref) const { return (!((*this) == _Right_cref)); }
+
+		bool operator!() const { return (!m_ptr); }
+		operator bool() const { return m_ptr; }
+
+		explicit operator _Ty*() const {
+			if (nullptr == m_ptr) {
+				int q = 3; /* just a line of code for putting a debugger break point */
+			}
+			return m_ptr;
+		}
+
+		/* m_ptr needs to be mutable so that it can be set to nullptr when the object it points to is no longer valid (i.e. has
+		been deleted) even in cases when this smart pointer is const. */
+		mutable _Ty* m_ptr;
+	};
+
+	/* TSaferPtrForLegacy is similar to TSaferPtr, but more readily converts to a native pointer implicitly. So when replacing
+	native pointers with safer pointers in legacy code, fewer code changes (explicit casts) may be required when using this
+	template. */
+	template<typename _Ty>
+	class TSaferPtrForLegacy : public CSaferPtrBase {
+	public:
+		TSaferPtrForLegacy(_Ty* ptr = nullptr) : m_ptr(ptr) {}
+		virtual ~TSaferPtrForLegacy() {}
+
+		virtual void setToNull() const { m_ptr = nullptr; }
+
+		void pointer(_Ty* ptr) { m_ptr = ptr; }
+		_Ty* pointer() const { return m_ptr; }
+		_Ty& operator*() const {
+			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TSaferPtrForLegacy")); }
+			return (*m_ptr);
+		}
+		_Ty* operator->() const {
+			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TSaferPtrForLegacy")); }
+			return m_ptr;
+		}
+		TSaferPtrForLegacy<_Ty>& operator=(_Ty* ptr) {
+			m_ptr = ptr;
+			return (*this);
+		}
+		//operator bool() const { return m_ptr; }
+
+		operator _Ty*() const {
+			if (nullptr == m_ptr) {
+				int q = 3; /* just a line of code for putting a debugger break point */
+			}
+			return m_ptr;
+		}
+
+		/* m_ptr needs to be mutable so that it can be set to nullptr when the object it points to is no longer valid (i.e. has
+		been deleted) even in cases when this smart pointer is const. */
+		mutable _Ty* m_ptr;
+	};
+
 }
 #endif /*ndef MSEPRIMITIVES_H*/

@@ -16,68 +16,6 @@
 
 namespace mse {
 
-	template<typename _Ty>
-	class TConstNullInitialized {
-	public:
-		TConstNullInitialized() : m_ptr(nullptr) {}
-		TConstNullInitialized(const _Ty* ptr) : m_ptr(ptr) {}
-		void pointer(const _Ty* ptr) { m_ptr = ptr; }
-		const _Ty* pointer() const { return m_ptr; }
-		_Ty& operator*() const {
-			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TConstNullInitialized")); }
-			return (*m_ptr);
-		}
-		const _Ty* operator->() const {
-			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TConstNullInitialized")); }
-			return m_ptr;
-		}
-		TConstNullInitialized<_Ty>& operator=(const _Ty* ptr) {
-			m_ptr = ptr;
-			return (*this);
-		}
-		TConstNullInitialized<_Ty>& operator=(const TConstNullInitialized<_Ty>& _Right_cref) {
-			m_ptr = _Right_cref.m_ptr;
-			return (*this);
-		}
-		bool operator==(const _Ty* _Right_cref) const { return (_Right_cref == m_ptr); }
-		bool operator!=(const _Ty* _Right_cref) const { return (!((*this) == _Right_cref)); }
-		bool operator==(const TConstNullInitialized<_Ty> &_Right_cref) const { return (_Right_cref == m_ptr); }
-		bool operator!=(const TConstNullInitialized<_Ty> &_Right_cref) const { return (!((*this) == _Right_cref)); }
-
-		const _Ty* m_ptr;
-	};
-
-	template<typename _Ty>
-	class TNullInitialized {
-	public:
-		TNullInitialized() : m_ptr(nullptr) {}
-		TNullInitialized(_Ty* ptr) : m_ptr(ptr) {}
-		void pointer(_Ty* ptr) { m_ptr = ptr; }
-		_Ty* pointer() const { return m_ptr; }
-		_Ty& operator*() const {
-			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TNullInitialized")); }
-			return (*m_ptr);
-		}
-		_Ty* operator->() const {
-			if (nullptr == m_ptr) { throw(std::out_of_range("attempt to dereference null pointer - mse::TNullInitialized")); }
-			return m_ptr;
-		}
-		TNullInitialized<_Ty>& operator=(_Ty* ptr) {
-			m_ptr = ptr;
-			return (*this);
-		}
-		TNullInitialized<_Ty>& operator=(const TNullInitialized<_Ty>& _Right_cref) {
-			m_ptr = _Right_cref.m_ptr;
-			return (*this);
-		}
-		bool operator==(const _Ty* _Right_cref) const { return (_Right_cref == m_ptr); }
-		bool operator!=(const _Ty* _Right_cref) const { return (!((*this) == _Right_cref)); }
-		bool operator==(const TNullInitialized<_Ty> &_Right_cref) const { return (_Right_cref == m_ptr); }
-		bool operator!=(const TNullInitialized<_Ty> &_Right_cref) const { return (!((*this) == _Right_cref)); }
-
-		_Ty* m_ptr;
-	};
-
 #ifndef _NOEXCEPT
 #define _NOEXCEPT
 #endif /*_NOEXCEPT*/
@@ -1768,7 +1706,7 @@ namespace mse {
 				base_class::const_iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CSize_t m_index;
-			TConstNullInitialized<_Myt> m_owner_cptr;
+			TSaferPtrForLegacy<const _Myt> m_owner_cptr;
 			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 		/* Note that, at the moment, ss_iterator_type inherits publicly from base_class::iterator. This is not intended to be a permanent
@@ -1969,7 +1907,7 @@ namespace mse {
 				base_class::iterator::operator+=(mse::as_a_size_t(m_index));
 			}
 			mse::CSize_t m_index;
-			TNullInitialized<_Myt> m_owner_ptr;
+			TSaferPtrForLegacy<_Myt> m_owner_ptr;
 			friend class /*_Myt*/msevector<_Ty, _A>;
 		};
 		typedef std::reverse_iterator<ss_iterator_type> ss_reverse_iterator_type;

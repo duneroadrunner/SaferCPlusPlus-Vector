@@ -9,6 +9,7 @@
 #include "msemstdvector.h"
 #include "mseivector.h"
 #include "msevector_test.h"
+#include "mseregistered.h"
 #include <iostream>
 
 
@@ -163,6 +164,86 @@ int main(int argc, char* argv[])
 			std::cerr << "expected exception" << std::endl;
 			/* The exception is triggered by an attempt to set an mse::CSize_t to an "out of range" value. */
 		}
+	}
+
+	{
+		/* For safety reasons we want to avoid using native pointers. "Managed" pointers like std:shared_ptr are an alternative, but
+		sometimes you don't want a pointer that takes ownership (of the object's lifespan). So we provide mse::TRegisteredPointer.
+		Because it doesn't take ownership, it can be used with objects allocated on the stack and is compatible with raii
+		techniques. Also, in most cases, it can be used as a compatible, direct substitute for native pointers, making it
+		straightforward to update legacy code. */
+
+		class A {
+		public:
+			virtual ~A() {}
+			int b = 3;
+		};
+		class B {
+		public:
+			static int foo1(A* a_native_ptr) { return a_native_ptr->b; }
+			static int foo2(mse::TRegisteredPointer<A> A_registered_ptr) { return A_registered_ptr->b; }
+		protected:
+			~B() {}
+		};
+
+		A* A_native_ptr = nullptr;
+		/* mse::TRegisteredPointer<> is basically a "safe" version of the native pointer. */
+		mse::TRegisteredPointer<A> A_registered_ptr1;
+
+		{
+			A a;
+			mse::TRegisteredObj<A> registered_a;
+
+			assert(a.b == registered_a.b);
+			A_native_ptr = &a;
+			A_registered_ptr1 = &registered_a;
+			assert(A_native_ptr->b == A_registered_ptr1->b);
+
+			auto A_registered_ptr2 = &registered_a;
+			/* A_registered_ptr2 is actually an mse::TRegisteredPointer<A>, not a native pointer. */
+			A_registered_ptr2 = nullptr;
+			try {
+				int i = A_registered_ptr2->b; /* this is gonna throw an exception */
+			}
+			catch (...) {
+				std::cerr << "expected exception" << std::endl;
+				/* The exception is triggered by an attempt to dereference a null "registered pointer". */
+			}
+
+			/* mse::TRegisteredPointers can be coerced into native pointers if you need to interact with legacy code or libraries. */
+			B::foo1((A*)A_registered_ptr1);
+
+			if (A_registered_ptr2) {
+			}
+			else if (A_registered_ptr2 != A_registered_ptr1) {
+				A_registered_ptr2 = A_registered_ptr1;
+				assert(A_registered_ptr2 == A_registered_ptr1);
+			}
+		}
+
+		try {
+			/* A_registered_ptr1 "knows" that the (registered) object it was pointing to has now been deallocated. */
+			int i = A_registered_ptr1->b; /* So this is gonna throw an exception */
+		}
+		catch (...) {
+			std::cerr << "expected exception" << std::endl;
+		}
+
+		{
+			/* For heap allocations mse::registered_new is kind of analagous to std::make_shared, but again,
+			mse::TRegisteredPointers don't take ownership so you are responsible for deallocation. */
+			auto A_registered_ptr3 = mse::registered_new<A>();
+			assert(3 == A_registered_ptr3->b);
+			mse::registered_delete<A>(A_registered_ptr3);
+			try {
+				/* A_registered_ptr3 "knows" that the (registered) object it was pointing to has now been deallocated. */
+				int i = A_registered_ptr3->b; /* So this is gonna throw an exception */
+			}
+			catch (...) {
+				std::cerr << "expected exception" << std::endl;
+			}
+		}
+
 	}
 
 	return 0;
