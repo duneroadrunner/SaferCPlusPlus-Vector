@@ -29,11 +29,11 @@ namespace mse {
 		TRegisteredPointer(_Ty* ptr = nullptr) : TSaferPtr<_Ty>(ptr) { gSPManager.registerPointer((*this), ptr); }
 		TRegisteredPointer(const TRegisteredPointer& src_cref) : TSaferPtr<_Ty>(src_cref.m_ptr) { gSPManager.registerPointer((*this), src_cref.m_ptr); }
 		virtual ~TRegisteredPointer() {
-			gSPManager.unregisterPointer((*this), m_ptr);
+			gSPManager.unregisterPointer((*this), (*this).m_ptr);
 			gSPManager.onObjectDestruction(this); /* Just in case there's a pointer to this pointer out there. */
 		}
 		TRegisteredPointer<_Ty>& operator=(_Ty* ptr) {
-			gSPManager.unregisterPointer((*this), m_ptr);
+			gSPManager.unregisterPointer((*this), (*this).m_ptr);
 			TSaferPtr<_Ty>::operator=(ptr);
 			gSPManager.registerPointer((*this), ptr);
 			return (*this);
@@ -43,10 +43,10 @@ namespace mse {
 		}
 		/* This native pointer cast operator is just for compatibility with existing/legacy code and ideally should never be used. */
 		explicit operator _Ty*() const {
-			if (nullptr == m_ptr) {
+			if (nullptr == (*this).m_ptr) {
 				int q = 5; /* just a line of code for putting a debugger break point */
 			}
-			return m_ptr;
+			return (*this).m_ptr;
 		}
 	};
 
@@ -59,11 +59,11 @@ namespace mse {
 		TRegisteredPointerForLegacy(_Ty* ptr = nullptr) : TSaferPtrForLegacy<_Ty>(ptr) { gSPManager.registerPointer((*this), ptr); }
 		TRegisteredPointerForLegacy(const TRegisteredPointerForLegacy& src_cref) : TSaferPtrForLegacy<_Ty>(src_cref.m_ptr) { gSPManager.registerPointer((*this), src_cref.m_ptr); }
 		virtual ~TRegisteredPointerForLegacy() {
-			gSPManager.unregisterPointer((*this), m_ptr);
+			gSPManager.unregisterPointer((*this), (*this).m_ptr);
 			gSPManager.onObjectDestruction(this); /* Just in case there's a pointer to this pointer out there. */
 		}
 		TRegisteredPointerForLegacy<_Ty>& operator=(_Ty* ptr) {
-			gSPManager.unregisterPointer((*this), m_ptr);
+			gSPManager.unregisterPointer((*this), (*this).m_ptr);
 			TSaferPtrForLegacy<_Ty>::operator=(ptr);
 			gSPManager.registerPointer((*this), ptr);
 			return (*this);
@@ -73,10 +73,10 @@ namespace mse {
 		}
 		/* This native pointer cast operator is just for compatibility with existing/legacy code and ideally should never be used. */
 		operator _Ty*() const {
-			if (nullptr == m_ptr) {
+			if (nullptr == (*this).m_ptr) {
 				int q = 5; /* just a line of code for putting a debugger break point */
 			}
-			return m_ptr;
+			return (*this).m_ptr;
 		}
 	};
 

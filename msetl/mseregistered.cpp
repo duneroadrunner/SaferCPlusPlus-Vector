@@ -1,5 +1,6 @@
 
 #include "mseregistered.h"
+#include <list>
 
 
 namespace mse {
