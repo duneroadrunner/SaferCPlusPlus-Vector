@@ -50,6 +50,9 @@ namespace mse {
 		}
 	};
 
+	/* TRegisteredPointerForLegacy is similar to TRegisteredPointer, but more readily converts to a native pointer implicitly. So
+	when replacing native pointers with "registered" pointers in legacy code, fewer code changes (explicit casts) may be required
+	when using this template. */
 	template<typename _Ty>
 	class TRegisteredPointerForLegacy : public TSaferPtrForLegacy<_Ty> {
 	public:
