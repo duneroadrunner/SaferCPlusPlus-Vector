@@ -221,43 +221,6 @@ int main(int argc, char* argv[])
 				A_registered_ptr2 = A_registered_ptr1;
 				assert(A_registered_ptr2 == A_registered_ptr1);
 			}
-
-			{
-				class CA {
-				public:
-					//virtual ~CA() {}
-					int b = 3;
-					bool operator==(const CA &x) const { return (b == x.b); }
-				};
-				mse::TRegisteredObj<CA> regobj_a;
-				auto regobj_a2 = regobj_a;
-				mse::TRegisteredPointer<CA> a_regptr = &regobj_a;
-				auto a_regptr2 = a_regptr;
-				CA obj_a;
-				auto obj_a2 = obj_a;
-				if (a_regptr) {
-					int q = 7;
-				}
-				if (a_regptr == nullptr) {
-					int q = 7;
-				}
-				if (a_regptr != nullptr) {
-					int q = 7;
-				}
-				if (a_regptr != a_regptr2) {
-					int q = 7;
-				}
-				if (a_regptr != a_regptr2) {
-					int q = 7;
-				}
-				if (regobj_a == regobj_a2) {
-					int q = 7;
-				}
-				if (obj_a == obj_a2) {
-					int q = 7;
-				}
-			}
-			//mse::s_registered_test1();
 		}
 
 		try {
@@ -281,6 +244,38 @@ int main(int argc, char* argv[])
 			catch (...) {
 				std::cerr << "expected exception" << std::endl;
 			}
+		}
+
+		{
+			/* mse::TRegisteredPointerForLegacy<> behaves very similar to mse::TRegisteredPointer<> but is even more "compatible"
+			with native pointers (i.e. less explicit casting is required when interacting with native pointers and native pointer
+			interfaces). So if you're updating existing or legacy code to be safer, replacing native pointers with
+			mse::TRegisteredPointerForLegacy<> may be more convenient than mse::TRegisteredPointer<>.
+			One case where you may need to use mse::TRegisteredPointerForLegacy<> even when not dealing with legacy code is when
+			you need a reference to an object before it is fully defined. For example, when you have two classes that mutually
+			reference each other. mse::TRegisteredPointer<> does not support this.
+			*/
+
+			class C;
+
+			class D {
+			public:
+				virtual ~D() {}
+				mse::TRegisteredPointerForLegacy<C> m_c_ptr;
+			};
+
+			class C {
+			public:
+				mse::TRegisteredPointerForLegacy<D> m_d_ptr;
+			};
+
+			mse::TRegisteredObjForLegacy<C> regobjfl_c;
+			mse::TRegisteredPointerForLegacy<D> d_ptr = mse::registered_new_for_legacy<D>();
+
+			regobjfl_c.m_d_ptr = d_ptr;
+			d_ptr->m_c_ptr = &regobjfl_c;
+
+			mse::registered_delete_for_legacy<D>(d_ptr);
 		}
 
 	}
