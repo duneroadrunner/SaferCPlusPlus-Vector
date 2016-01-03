@@ -35,7 +35,7 @@ namespace mse {
              typename = typename std::enable_if              \
              <                                               \
                 std::is_constructible<Base, Args...>::value  \
-			 			 			              >::type>                                        \
+			 			 			 			              >::type>                                        \
     Derived(Args &&...args)                                  \
         : Base(std::forward<Args>(args)...) { }              \
 
@@ -641,7 +641,8 @@ namespace mse {
 	template<typename _Ty>
 	class TSaferPtr : public CSaferPtrBase {
 	public:
-		TSaferPtr(_Ty* ptr = nullptr) : m_ptr(ptr) {}
+		TSaferPtr() : m_ptr(nullptr) {}
+		TSaferPtr(_Ty* ptr) : m_ptr(ptr) {}
 		TSaferPtr(const TSaferPtr<_Ty>& src) : m_ptr(src.m_ptr) {}
 		virtual ~TSaferPtr() {}
 
@@ -691,7 +692,8 @@ namespace mse {
 	template<typename _Ty>
 	class TSaferPtrForLegacy : public CSaferPtrBase {
 	public:
-		TSaferPtrForLegacy(_Ty* ptr = nullptr) : m_ptr(ptr) {}
+		TSaferPtrForLegacy() : m_ptr(nullptr) {}
+		TSaferPtrForLegacy(_Ty* ptr) : m_ptr(ptr) {}
 		virtual ~TSaferPtrForLegacy() {}
 
 		virtual void setToNull() const { m_ptr = nullptr; }
