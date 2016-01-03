@@ -73,7 +73,7 @@ namespace mse {
 	}
 	template <class _Ty>
 	void registered_delete_for_legacy(const TRegisteredPointerForLegacy<_Ty>& regPtrRef) {
-		auto a = dynamic_cast<TRegisteredPointerForLegacy<_Ty> *>((_Ty *)regPtrRef);
+		auto a = dynamic_cast<TRegisteredObjForLegacy<_Ty> *>((_Ty *)regPtrRef);
 		delete a;
 	}
 }
