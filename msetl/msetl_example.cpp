@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 			interfaces). So if you're updating existing or legacy code to be safer, replacing native pointers with
 			mse::TRegisteredPointerForLegacy<> may be more convenient than mse::TRegisteredPointer<>.
 			One case where you may need to use mse::TRegisteredPointerForLegacy<> even when not dealing with legacy code is when
-			you need a reference to an object before it is fully defined. For example, when you have two classes that mutually
+			you need a reference to a class before it is fully defined. For example, when you have two classes that mutually
 			reference each other. mse::TRegisteredPointer<> does not support this.
 			*/
 
