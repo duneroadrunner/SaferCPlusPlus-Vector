@@ -9,7 +9,7 @@
 #include "msemstdvector.h"
 #include "mseivector.h"
 #include "msevector_test.h"
-#include "mseregistered.h"
+#include "mseregisteredforlegacy.h"
 #include <iostream>
 
 
@@ -193,6 +193,8 @@ int main(int argc, char* argv[])
 		{
 			A a;
 			mse::TRegisteredObj<A> registered_a;
+			/* mse::TRegisteredObj<A> is a class that is publicly derived from A, and so should be a compatible substitute for A
+			in almost all cases. */
 
 			assert(a.b == registered_a.b);
 			A_native_ptr = &a;
@@ -219,6 +221,43 @@ int main(int argc, char* argv[])
 				A_registered_ptr2 = A_registered_ptr1;
 				assert(A_registered_ptr2 == A_registered_ptr1);
 			}
+
+			{
+				class CA {
+				public:
+					//virtual ~CA() {}
+					int b = 3;
+					bool operator==(const CA &x) const { return (b == x.b); }
+				};
+				mse::TRegisteredObj<CA> regobj_a;
+				auto regobj_a2 = regobj_a;
+				mse::TRegisteredPointer<CA> a_regptr = &regobj_a;
+				auto a_regptr2 = a_regptr;
+				CA obj_a;
+				auto obj_a2 = obj_a;
+				if (a_regptr) {
+					int q = 7;
+				}
+				if (a_regptr == nullptr) {
+					int q = 7;
+				}
+				if (a_regptr != nullptr) {
+					int q = 7;
+				}
+				if (a_regptr != a_regptr2) {
+					int q = 7;
+				}
+				if (a_regptr != a_regptr2) {
+					int q = 7;
+				}
+				if (regobj_a == regobj_a2) {
+					int q = 7;
+				}
+				if (obj_a == obj_a2) {
+					int q = 7;
+				}
+			}
+			//mse::s_registered_test1();
 		}
 
 		try {
