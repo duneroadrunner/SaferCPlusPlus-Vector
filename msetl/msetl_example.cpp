@@ -9,6 +9,7 @@
 #include "msemstdvector.h"
 #include "mseivector.h"
 #include "msevector_test.h"
+#include "mseregistered.h"
 #include "mseregisteredforlegacy.h"
 #include <iostream>
 
@@ -277,6 +278,8 @@ int main(int argc, char* argv[])
 
 			mse::registered_delete_for_legacy<D>(d_ptr);
 		}
+
+		mse::s_regptr_test1();
 
 	}
 
