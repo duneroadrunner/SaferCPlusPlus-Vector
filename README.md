@@ -1,3 +1,22 @@
+This is a (very) old version of the project found here: https://github.com/duneroadrunner/SaferCPlusPlus
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+-------------------------------------------------------------------------------------------------------------
+
 SaferCPlusPlus-Vector
 =====================
 Jan 2016
